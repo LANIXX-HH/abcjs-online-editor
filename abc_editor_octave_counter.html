@@ -1,0 +1,702 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+.abcjs-inline-audio{display:flex;align-items:center;flex-wrap:wrap;gap:4px;padding:8px 12px;background:var(--color-background-secondary);border-top:0.5px solid var(--color-border-tertiary);font-family:var(--font-sans)}
+.abcjs-inline-audio .abcjs-btn{background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:5px 8px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--color-text-primary);transition:background .1s}
+.abcjs-inline-audio .abcjs-btn:hover{background:var(--color-background-secondary)}
+.abcjs-inline-audio .abcjs-btn svg{width:20px;height:20px;fill:currentColor}
+.abcjs-inline-audio .abcjs-pushed{background:#185FA5;color:#E6F1FB;border-color:#185FA5}
+.abcjs-inline-audio .abcjs-midi-progress-background{flex:1;height:6px;background:var(--color-border-tertiary);border-radius:3px;cursor:pointer;border:none;padding:0;position:relative;min-width:80px}
+.abcjs-inline-audio .abcjs-midi-progress-indicator{position:absolute;top:-3px;left:0;width:12px;height:12px;border-radius:50%;background:#185FA5;transform:translateX(-50%);pointer-events:none}
+.abcjs-inline-audio .abcjs-midi-clock{font-size:12px;font-family:var(--font-mono);color:var(--color-text-secondary);min-width:35px}
+.abcjs-inline-audio .abcjs-tempo-wrapper{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--color-text-secondary)}
+.abcjs-inline-audio .abcjs-midi-tempo{width:44px;font-size:12px;font-family:var(--font-mono);border:0.5px solid var(--color-border-tertiary);border-radius:4px;background:var(--color-background-primary);color:var(--color-text-primary);padding:2px 4px;text-align:center}
+.abcjs-inline-audio .abcjs-midi-current-tempo{font-family:var(--font-mono)}
+.abcjs-inline-audio .abcjs-loading svg circle{stroke:#185FA5;animation:abcjs-spin 1s linear infinite}
+@keyframes abcjs-spin{0%{transform:rotate(0deg);transform-origin:50% 50%}100%{transform:rotate(360deg);transform-origin:50% 50%}}
+.abcjs-inline-audio .abcjs-loading-svg,.abcjs-inline-audio .abcjs-pause-svg{display:none}
+.abcjs-inline-audio .abcjs-play-svg{display:block}
+.abcjs-inline-audio.abcjs-playing .abcjs-play-svg{display:none}
+.abcjs-inline-audio.abcjs-playing .abcjs-pause-svg{display:block}
+.abcjs-inline-audio.abcjs-loading .abcjs-play-svg{display:none}
+.abcjs-inline-audio.abcjs-loading .abcjs-loading-svg{display:block}
+.abcjs-css-warning{display:none!important}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans);height:100%;overflow:hidden}
+.wrap{display:grid;grid-template-columns:225px 1fr;grid-template-rows:auto 1fr;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);overflow:hidden;height:680px}
+.toolbar{grid-column:1/-1;background:var(--color-background-secondary);border-bottom:0.5px solid var(--color-border-tertiary);padding:8px 12px;display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.tg{display:flex;gap:3px;align-items:center;padding-right:7px;border-right:0.5px solid var(--color-border-tertiary)}
+.tg:last-child{border-right:none;padding-right:0}
+.tl{font-size:10px;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-right:2px;white-space:nowrap}
+.btn{background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);border-radius:6px;padding:4px 8px;font-size:13px;cursor:pointer;color:var(--color-text-primary);font-family:var(--font-sans);transition:background .1s;line-height:1.2}
+.btn:hover{background:var(--color-background-secondary)}
+.btn.active{background:#185FA5;color:#E6F1FB;border-color:#185FA5}
+.btn-sq{width:27px;height:27px;padding:0;display:flex;align-items:center;justify-content:center;font-size:13px}
+.note-btn{display:flex;flex-direction:column;align-items:center;gap:1px;padding:3px 5px;min-width:30px;height:34px;justify-content:center}
+.note-btn .nb-main{font-size:13px;font-weight:600;line-height:1}
+.note-btn .nb-sub{font-size:9px;color:var(--color-text-secondary);line-height:1}
+.note-btn.active .nb-sub{color:#b3d4f5}
+
+/* counter badge shared style */
+.counter-val{
+  font-size:12px;font-family:var(--font-mono);font-weight:700;
+  min-width:28px;text-align:center;
+  padding:2px 4px;border-radius:4px;
+  background:var(--color-background-primary);
+  border:0.5px solid var(--color-border-tertiary);
+  color:var(--color-text-primary);
+  line-height:1.4;
+}
+.counter-val.nonzero{background:#E6F1FB;color:#185FA5;border-color:#185FA5;}
+
+.sidebar{background:var(--color-background-secondary);border-right:0.5px solid var(--color-border-tertiary);padding:12px;display:flex;flex-direction:column;gap:11px;overflow-y:auto}
+.stitle{font-size:10px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
+.fl{display:flex;flex-direction:column;gap:3px;margin-bottom:6px}
+.flabel{font-size:11px;color:var(--color-text-secondary)}
+.fi{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:6px;padding:5px 7px;font-size:12px;color:var(--color-text-primary);font-family:var(--font-sans);width:100%}
+.fi:focus{outline:none;border-color:#185FA5}
+.register-toggle{display:flex;background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:8px;overflow:hidden;height:48px;position:relative}
+.reg-pill{position:absolute;top:3px;bottom:3px;width:calc(50% - 6px);border-radius:6px;background:#185FA5;transition:left .2s cubic-bezier(.4,0,.2,1);z-index:0;opacity:.13}
+.reg-pill.down{left:3px}.reg-pill.up{left:calc(50% + 3px)}
+.reg-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;border:none;background:transparent;font-family:var(--font-sans);transition:all .15s;padding:4px 6px;position:relative;z-index:1}
+.reg-btn .reg-notes{font-size:13px;font-weight:700;line-height:1;letter-spacing:1px;color:var(--color-text-secondary)}
+.reg-btn .reg-label{font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-secondary)}
+.reg-btn.active .reg-notes,.reg-btn.active .reg-label{color:#185FA5}
+.reg-divider{width:0.5px;background:var(--color-border-tertiary);align-self:stretch;z-index:1}
+.namesys-row{display:flex;gap:4px;margin-bottom:6px}
+.namesys-btn{flex:1;padding:5px 3px;background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:6px;cursor:pointer;font-family:var(--font-sans);text-align:center;transition:all .15s}
+.namesys-btn:hover{border-color:#185FA5;background:#F0F6FD}
+.namesys-btn.active{border-color:#185FA5;background:#E6F1FB;box-shadow:0 0 0 1.5px #185FA5}
+.namesys-btn .ns-title{font-size:11px;font-weight:600;color:var(--color-text-primary);display:block}
+.namesys-btn .ns-sub{font-size:9px;color:var(--color-text-secondary);display:block;margin-top:1px}
+.namesys-btn.active .ns-title{color:#185FA5}
+.clef-row{display:flex;gap:5px;margin-bottom:6px}
+.clef-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 4px;background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:8px;cursor:pointer;transition:all .15s;font-family:var(--font-sans)}
+.clef-btn:hover{border-color:#185FA5;background:#F0F6FD}
+.clef-btn.active{border-color:#185FA5;background:#E6F1FB;box-shadow:0 0 0 1.5px #185FA5}
+.clef-icon{font-size:22px;line-height:1;color:var(--color-text-primary)}
+.clef-label{font-size:10px;color:var(--color-text-secondary);font-weight:500;text-transform:uppercase;letter-spacing:.04em}
+.clef-btn.active .clef-label,.clef-btn.active .clef-icon{color:#185FA5}
+.tpl-btn{text-align:left;padding:5px 7px;font-size:11px;width:100%;margin-bottom:3px}
+.tab-row{display:flex;border-bottom:0.5px solid var(--color-border-tertiary);margin-bottom:6px}
+.tab{padding:4px 10px;font-size:11px;cursor:pointer;color:var(--color-text-secondary);border-bottom:2px solid transparent;margin-bottom:-0.5px}
+.tab.active{color:#185FA5;border-bottom-color:#185FA5;font-weight:500}
+.panel{display:none}.panel.active{display:block}
+.help-box{font-size:11px;color:var(--color-text-secondary);line-height:1.8;background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:6px;padding:7px 9px}
+.help-box b{color:var(--color-text-primary)}
+.action-row{display:flex;gap:5px}
+.badge{font-size:10px;padding:2px 6px;border-radius:20px;font-weight:500}
+.badge-b{background:#E6F1FB;color:#0C447C}.badge-g{background:#EAF3DE;color:#27500A}
+.main{display:flex;flex-direction:column;overflow:hidden}
+.score-panel{flex:1;padding:12px;background:var(--color-background-primary);overflow:auto;position:relative}
+#paper0{width:100%}#paper0 svg{width:100%;height:auto}
+#paper0 .drag-active path,#paper0 .drag-active ellipse,#paper0 .drag-active rect{fill:#E05C00!important}
+#paper0 .abcjs-highlight path,#paper0 .abcjs-highlight ellipse,#paper0 .abcjs-highlight rect{fill:#185FA5!important}
+#paper0 .abcjs-cursor{stroke:#E05C00!important;stroke-width:2px}
+.drag-tip{position:absolute;background:#185FA5;color:#fff;font-size:11px;font-family:var(--font-mono);padding:3px 7px;border-radius:5px;pointer-events:none;display:none;z-index:100;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.divider{height:0.5px;background:var(--color-border-tertiary)}
+.abc-panel{padding:8px 12px 10px;background:var(--color-background-secondary)}
+.abc-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+.abc-lbl{font-size:10px;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.05em}
+.code-wrap{position:relative;background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:6px;overflow:hidden}
+.code-hl{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;padding:7px 9px;font-family:var(--font-mono);font-size:11.5px;line-height:1.5;white-space:pre-wrap;word-wrap:break-word;color:transparent;overflow:hidden}
+.abc-ta{position:relative;width:100%;background:transparent;border:none;padding:7px 9px;font-family:var(--font-mono);font-size:11.5px;color:var(--color-text-primary);resize:vertical;min-height:82px;line-height:1.5;caret-color:var(--color-text-primary)}
+.abc-ta:focus{outline:none}
+.sh-h{color:#0C7A5A;font-weight:600}.sh-hv{color:#16A085}.sh-b{color:#999}.sh-a{color:#C0392B;font-weight:700}.sh-r{color:#8E44AD}.sh-n{color:#185FA5}.sh-l{color:#E67E22}.sh-c{color:#16A085}
+.warn-box{background:#FCEBEB;border:0.5px solid #F09595;border-radius:6px;padding:6px 9px;font-size:11px;color:#A32D2D;margin-top:6px;display:none}
+.msg{font-size:11px;color:var(--color-text-secondary);margin-top:3px;min-height:13px}
+.bottom-bar{display:flex;align-items:center;gap:6px;padding:7px 12px;background:var(--color-background-secondary);border-top:0.5px solid var(--color-border-tertiary);flex-wrap:wrap}
+.dl-btn{background:#185FA5;color:#fff;border:none;border-radius:6px;padding:4px 11px;font-size:11px;cursor:pointer;font-family:var(--font-sans)}
+.dl-btn:hover{background:#0F4A8F}
+.zoom-wrap{display:flex;align-items:center;gap:5px;margin-left:auto}
+.zoom-lbl{font-size:11px;color:var(--color-text-secondary)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ── Toolbar ── -->
+<div class="toolbar">
+  <div class="tg" id="noteButtonGroup"></div>
+  <div class="tg">
+    <span class="tl">Vorzeichen</span>
+    <button class="btn btn-sq active" data-acc="">♮</button>
+    <button class="btn btn-sq" data-acc="^">♯</button>
+    <button class="btn btn-sq" data-acc="_">♭</button>
+    <button class="btn btn-sq" data-acc="^^">𝄪</button>
+    <button class="btn btn-sq" data-acc="__">𝄫</button>
+  </div>
+  <div class="tg">
+    <span class="tl">Länge</span>
+    <button class="btn" data-len="4">𝅝</button>
+    <button class="btn" data-len="2">𝅗𝅥</button>
+    <button class="btn active" data-len="1">♩</button>
+    <button class="btn" data-len="/2">♪</button>
+    <button class="btn" data-len="/4">𝅘𝅥𝅯</button>
+  </div>
+  <div class="tg">
+    <span class="tl">Einfügen</span>
+    <button class="btn" id="addRest">𝄽 Pause</button>
+    <button class="btn" id="addBar">| Takt</button>
+    <button class="btn" id="addRepO">|:</button>
+    <button class="btn" id="addRepC">:|</button>
+    <button class="btn" id="addNl">↵</button>
+    <button class="btn" id="delLast">⌫</button>
+  </div>
+
+  <!-- OKTAVE counter -->
+  <div class="tg">
+    <span class="tl">Oktave</span>
+    <button class="btn btn-sq" id="octDown" title="Eine Oktave tiefer">−</button>
+    <span class="counter-val" id="octVal">0</span>
+    <button class="btn btn-sq" id="octUp" title="Eine Oktave höher">+</button>
+    <button class="btn btn-sq" id="octReset" title="Oktave zurücksetzen" style="font-size:10px">↺</button>
+  </div>
+
+  <!-- TRANSPONIEREN counter -->
+  <div class="tg">
+    <span class="tl">Transponieren</span>
+    <button class="btn btn-sq" id="trDown">−</button>
+    <span class="counter-val" id="trVal">0</span>
+    <button class="btn btn-sq" id="trUp">+</button>
+    <button class="btn btn-sq" id="trReset" style="font-size:10px">↺</button>
+  </div>
+</div>
+
+<!-- ── Sidebar ── -->
+<div class="sidebar">
+  <div>
+    <div class="stitle">Lied-Info</div>
+    <div class="fl"><label class="flabel">Titel</label><input class="fi" id="fTitle" value="Mein Lied"></div>
+    <div class="fl"><label class="flabel">Komponist</label><input class="fi" id="fComposer" placeholder="optional"></div>
+    <div class="fl"><label class="flabel">Taktart</label>
+      <select class="fi" id="fMeter">
+        <option value="">— Keine —</option>
+        <option value="4/4" selected>4/4 – Vier Viertel</option>
+        <option value="3/4">3/4 – Walzer</option>
+        <option value="2/4">2/4 – Marsch</option>
+        <option value="6/8">6/8 – Jig</option>
+        <option value="C">C – Common time</option>
+      </select>
+    </div>
+    <div class="fl"><label class="flabel">Tonart</label>
+      <select class="fi" id="fKey">
+        <option value="">— Keine —</option>
+        <option value="C" selected>C-Dur</option>
+        <option value="G">G-Dur (1♯)</option>
+        <option value="D">D-Dur (2♯)</option>
+        <option value="A">A-Dur (3♯)</option>
+        <option value="F">F-Dur (1♭)</option>
+        <option value="Bb">B-Dur (2♭)</option>
+        <option value="Eb">Es-Dur (3♭)</option>
+        <option value="Am">a-Moll</option>
+        <option value="Em">e-Moll</option>
+        <option value="Dm">d-Moll</option>
+      </select>
+    </div>
+    <div class="fl">
+      <label class="flabel">Register (Oktave)</label>
+      <div class="register-toggle">
+        <div class="reg-pill down" id="regPill"></div>
+        <button class="reg-btn active" data-reg="down"><span class="reg-notes">C D E</span><span class="reg-label">↓ Tief (Groß)</span></button>
+        <div class="reg-divider"></div>
+        <button class="reg-btn" data-reg="up"><span class="reg-notes">c d e</span><span class="reg-label">↑ Hoch (Klein)</span></button>
+      </div>
+    </div>
+    <div class="fl">
+      <label class="flabel">Notennamen</label>
+      <div class="namesys-row">
+        <button class="namesys-btn active" data-sys="letter"><span class="ns-title">A B C</span><span class="ns-sub">Deutsch</span></button>
+        <button class="namesys-btn" data-sys="solfege"><span class="ns-title">Do Re</span><span class="ns-sub">Solfège</span></button>
+        <button class="namesys-btn" data-sys="both"><span class="ns-title">C/Do</span><span class="ns-sub">Beides</span></button>
+      </div>
+    </div>
+    <div class="fl">
+      <label class="flabel">Notenschlüssel</label>
+      <div class="clef-row">
+        <button class="clef-btn active" data-clef="treble"><span class="clef-icon">𝄞</span><span class="clef-label">Violin</span></button>
+        <button class="clef-btn" data-clef="bass"><span class="clef-icon">𝄢</span><span class="clef-label">Bass</span></button>
+        <button class="clef-btn" data-clef="alto"><span class="clef-icon">𝄡</span><span class="clef-label">Alt</span></button>
+      </div>
+    </div>
+    <div class="fl"><label class="flabel">Tempo (BPM)</label><input class="fi" id="fTempo" type="number" value="120" min="40" max="300"></div>
+  </div>
+  <div>
+    <div class="stitle">Vorlagen</div>
+    <button class="btn tpl-btn" id="tpl1">♩ Hänschen Klein</button>
+    <button class="btn tpl-btn" id="tpl2">♩ C-Dur Tonleiter</button>
+    <button class="btn tpl-btn" id="tpl3">♩ Walzer</button>
+    <button class="btn tpl-btn" id="tpl4">♩ Ode an die Freude</button>
+    <button class="btn tpl-btn" id="tpl5">♩ Cooley's</button>
+  </div>
+  <div>
+    <div class="stitle">Hilfe</div>
+    <div class="tab-row">
+      <div class="tab active" data-tab="hn">Tasten</div>
+      <div class="tab" data-tab="ha">ABC</div>
+    </div>
+    <div class="panel active" id="hn">
+      <div class="help-box">
+        <b>Oktave +1</b>: c → c' &nbsp; <b>−1</b>: c → C (Register)<br>
+        <b>Transponieren</b>: visuelle Verschiebung in Halbtönen<br>
+        <b>Klick auf Note</b> = Ton spielen + markieren<br>
+        <b>Note ↑↓ ziehen</b> = Tonhöhe ändern<br>
+        <b>Schlüssel</b> = immer aktiv, auch ohne Tonart
+      </div>
+    </div>
+    <div class="panel" id="ha">
+      <div class="help-box">
+        <b>c'</b> = hohe Oktave &nbsp; <b>c''</b> = noch höher<br>
+        <b>C,</b> = tiefe Oktave &nbsp; <b>C,,</b> = noch tiefer<br>
+        <b>K:none bass</b> = Schlüssel ohne Tonart<br>
+        <b>^c</b>=c♯ &nbsp;<b>_e</b>=e♭
+      </div>
+    </div>
+  </div>
+  <div>
+    <div class="stitle">Aktionen</div>
+    <div class="action-row">
+      <button class="btn" id="btnClear" style="flex:1">Neu</button>
+      <button class="btn" id="btnCopy" style="flex:1">ABC ↗</button>
+    </div>
+    <div class="msg" id="actionMsg"></div>
+    <div style="margin-top:6px;display:flex;gap:5px;flex-wrap:wrap">
+      <span class="badge badge-b" id="noteCount">0 Noten</span>
+      <span class="badge badge-g" id="barCount">0 Takte</span>
+    </div>
+  </div>
+</div>
+
+<!-- ── Main ── -->
+<div class="main">
+  <div class="score-panel" id="scorePanel">
+    <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:8px">
+      Notenvorschau — <b>Klick</b>: Ton spielen &nbsp;|&nbsp; <b>Ziehen ↑↓</b>: Tonhöhe ändern
+    </div>
+    <div id="paper0"></div>
+    <div class="drag-tip" id="dragTip"></div>
+    <div class="warn-box" id="errBox"></div>
+  </div>
+  <div id="player"></div>
+  <div class="divider"></div>
+  <div class="abc-panel">
+    <div class="abc-top">
+      <span class="abc-lbl">ABC-Notation</span>
+      <label style="font-size:11px;color:var(--color-text-secondary);display:flex;align-items:center;gap:4px;cursor:pointer">
+        <input type="checkbox" id="syntaxToggle" checked style="accent-color:#185FA5"> Farben
+      </label>
+    </div>
+    <div class="code-wrap">
+      <div class="code-hl" id="codeHL" aria-hidden="true"></div>
+      <textarea class="abc-ta" id="abcTa" spellcheck="false" autocomplete="off"></textarea>
+    </div>
+    <div class="warn-box" id="warnTa"></div>
+  </div>
+  <div class="bottom-bar">
+    <button class="dl-btn" id="dlMidi">⬇ MIDI</button>
+    <button class="dl-btn" id="dlWav" style="background:#0F6E56">⬇ WAV</button>
+    <button class="dl-btn" id="dlAbc" style="background:#533AB7">⬇ ABC</button>
+    <div class="zoom-wrap">
+      <span class="zoom-lbl">Zoom</span>
+      <input type="range" id="zoomSlider" min="50" max="200" value="100" style="width:70px;accent-color:#185FA5">
+      <span style="font-size:11px;font-family:var(--font-mono);min-width:36px" id="zoomVal">100%</span>
+    </div>
+  </div>
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/abcjs@6.4.3/dist/abcjs-basic-min.js"></script>
+<script>
+const CHROMATIC=[
+  {abc:'C',midi:60},{abc:'^C',midi:61},{abc:'D',midi:62},{abc:'^D',midi:63},
+  {abc:'E',midi:64},{abc:'F',midi:65},{abc:'^F',midi:66},{abc:'G',midi:67},
+  {abc:'^G',midi:68},{abc:'A',midi:69},{abc:'^A',midi:70},{abc:'B',midi:71},
+  {abc:'c',midi:72},{abc:'^c',midi:73},{abc:'d',midi:74},{abc:'^d',midi:75},
+  {abc:'e',midi:76},{abc:'f',midi:77},{abc:'^f',midi:78},{abc:'g',midi:79},
+  {abc:'^g',midi:80},{abc:'a',midi:81},{abc:'^a',midi:82},{abc:'b',midi:83},
+  {abc:"c'",midi:84}
+];
+const NOTE_DEFS=[
+  {upper:'C',lower:'c',solfege:'Do'},{upper:'D',lower:'d',solfege:'Re'},
+  {upper:'E',lower:'e',solfege:'Mi'},{upper:'F',lower:'f',solfege:'Fa'},
+  {upper:'G',lower:'g',solfege:'Sol'},{upper:'A',lower:'a',solfege:'La'},
+  {upper:'B',lower:'b',solfege:'Si'},
+];
+
+const state={acc:'',len:'1',octave:0,transpose:0,clef:'treble',nameSys:'letter',register:'down'};
+let visualObj=null,synthControl=null,syntaxOn=true,zoomLevel=100,rt=null,dragState=null;
+
+const $=id=>document.getElementById(id);
+const abcTa=$('abcTa'),paper0=$('paper0'),errBox=$('errBox'),warnTa=$('warnTa'),codeHL=$('codeHL');
+const noteCount=$('noteCount'),barCount=$('barCount'),actionMsg=$('actionMsg');
+const trVal=$('trVal'),octVal=$('octVal'),regPill=$('regPill'),dragTip=$('dragTip');
+
+// ── Oktave-Counter ────────────────────────────────────────────────────
+// In ABC: hohe Oktave = Apostroph ' nach der Note, tiefe = Komma ,
+// Basis: Register down → Großbuchstabe (C), Register up → Kleinbuchstabe (c)
+// octave state: 0 = Basis, +1 = eine Oktave höher, -1 = eine tiefer, etc.
+//
+// Mapping for a base note:
+//   down-register, octave 0 → C  (MIDI ~48 range)
+//   down-register, octave +1 → c  (= lowercase, one octave up)
+//   down-register, octave +2 → c' 
+//   down-register, octave -1 → C, 
+//   up-register,  octave 0 → c
+//   up-register,  octave +1 → c'
+//   up-register,  octave -1 → C  (= uppercase, one octave down)
+//
+// ABC notation rules:
+//   Uppercase C = octave 3 (C below middle C)
+//   Lowercase c = octave 4 (middle C)
+//   c' = octave 5, c'' = octave 6
+//   C, = octave 2, C,, = octave 1
+
+function applyOctaveToNote(baseChar) {
+  // baseChar is the raw note letter (C or c depending on register)
+  // We need to apply state.octave offset to it
+  const isLower = baseChar === baseChar.toLowerCase();
+  
+  // Calculate effective octave shift:
+  // Register down (upper): base is C = octave 3
+  // Register up (lower):   base is c = octave 4
+  // Each +1 octave = one step up in ABC notation
+  
+  let note = baseChar;
+  let shift = state.octave;
+  
+  if (shift === 0) return note;
+  
+  if (shift > 0) {
+    // Need to go higher
+    // If base is uppercase (C), +1 → lowercase (c), +2 → c', +3 → c'', …
+    // If base is lowercase (c), +1 → c', +2 → c'', …
+    if (!isLower && shift >= 1) {
+      note = baseChar.toLowerCase();
+      shift -= 1;
+    }
+    // Now add apostrophes for remaining shifts
+    note += "'".repeat(shift);
+  } else {
+    // shift < 0 — go lower
+    // If base is lowercase (c), -1 → uppercase (C), -2 → C,, …
+    // If base is uppercase (C), -1 → C,, -2 → C,,, …
+    if (isLower && shift <= -1) {
+      note = baseChar.toUpperCase();
+      shift += 1;
+    }
+    // Now add commas for remaining shifts (shift is negative)
+    note += ",".repeat(-shift);
+  }
+  return note;
+}
+
+function setOctave(v) {
+  state.octave = Math.max(-4, Math.min(4, v));
+  const el = $('octVal');
+  el.textContent = state.octave > 0 ? '+' + state.octave : String(state.octave);
+  el.className = 'counter-val' + (state.octave !== 0 ? ' nonzero' : '');
+  buildNoteButtons(); // update preview in buttons
+}
+
+$('octUp').addEventListener('click',  () => setOctave(state.octave + 1));
+$('octDown').addEventListener('click',() => setOctave(state.octave - 1));
+$('octReset').addEventListener('click',()=> setOctave(0));
+
+// ── Transpose counter ─────────────────────────────────────────────────
+function setTranspose(v) {
+  state.transpose = Math.max(-24, Math.min(24, v));
+  const el = trVal;
+  el.textContent = state.transpose > 0 ? '+' + state.transpose : String(state.transpose);
+  el.className = 'counter-val' + (state.transpose !== 0 ? ' nonzero' : '');
+  scheduleRender();
+}
+$('trUp').addEventListener('click',   () => setTranspose(state.transpose + 1));
+$('trDown').addEventListener('click', () => setTranspose(state.transpose - 1));
+$('trReset').addEventListener('click',() => setTranspose(0));
+
+// ── Register toggle ───────────────────────────────────────────────────
+function setRegister(reg) {
+  state.register = reg;
+  regPill.className = 'reg-pill ' + reg;
+  document.querySelectorAll('[data-reg]').forEach(b => b.classList.toggle('active', b.dataset.reg === reg));
+  buildNoteButtons();
+}
+document.querySelectorAll('[data-reg]').forEach(btn => btn.addEventListener('click', () => setRegister(btn.dataset.reg)));
+
+// ── Clef ──────────────────────────────────────────────────────────────
+document.querySelectorAll('[data-clef]').forEach(btn => btn.addEventListener('click', () => {
+  state.clef = btn.dataset.clef;
+  document.querySelectorAll('[data-clef]').forEach(b => b.classList.remove('active')); btn.classList.add('active');
+  setTa(getBody()); scheduleRender();
+}));
+
+// ── Note buttons ──────────────────────────────────────────────────────
+function buildNoteButtons() {
+  const grp = $('noteButtonGroup'); grp.innerHTML = '';
+  const lbl = document.createElement('span'); lbl.className = 'tl'; lbl.textContent = 'Note'; grp.appendChild(lbl);
+
+  NOTE_DEFS.forEach(n => {
+    const isUp = state.register === 'up';
+    const baseChar = isUp ? n.lower : n.upper;
+    const finalNote = applyOctaveToNote(baseChar);
+
+    const btn = document.createElement('button');
+    btn.className = 'btn note-btn';
+    btn.dataset.note = finalNote;
+
+    // Build display label
+    // Main = letter with octave suffix hint
+    let mainLabel, subLabel;
+    if (state.nameSys === 'letter') {
+      mainLabel = `<span class="nb-main" style="font-size:${finalNote.length > 2 ? '10px' : '13px'}">${finalNote}</span>`;
+    } else if (state.nameSys === 'solfege') {
+      const sol = isUp ? n.solfege.toLowerCase() : n.solfege;
+      const octSuffix = finalNote.replace(/[A-Za-z]/g, ''); // get the modifier chars
+      mainLabel = `<span class="nb-main" style="font-size:10px">${sol}${octSuffix}</span>`;
+    } else {
+      const sol = isUp ? n.solfege.toLowerCase() : n.solfege;
+      const octSuffix = finalNote.replace(/[A-Za-z]/g, '');
+      mainLabel = `<span class="nb-main" style="font-size:${finalNote.length > 2 ? '10px' : '13px'}">${finalNote}</span>`;
+      subLabel = `<span class="nb-sub">${sol}${octSuffix}</span>`;
+    }
+
+    btn.innerHTML = mainLabel + (subLabel || '');
+    btn.title = `${finalNote} (${n.solfege})`;
+
+    btn.addEventListener('click', () => {
+      insertAtCursor(state.acc + finalNote + (state.len !== '1' ? state.len : ''));
+    });
+    grp.appendChild(btn);
+  });
+}
+
+document.querySelectorAll('[data-sys]').forEach(btn => btn.addEventListener('click', () => {
+  state.nameSys = btn.dataset.sys;
+  document.querySelectorAll('[data-sys]').forEach(b => b.classList.remove('active')); btn.classList.add('active');
+  buildNoteButtons();
+}));
+
+// ── Syntax highlighting ───────────────────────────────────────────────
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function syntaxHL(text){
+  if(!syntaxOn) return esc(text);
+  return text.split('\n').map(line=>{
+    if(/^[XTCMLQKVRW]:/.test(line)){const i=line.indexOf(':');return`<span class="sh-h">${esc(line.slice(0,i+1))}</span><span class="sh-hv">${esc(line.slice(i+1))}</span>`;}
+    let out='',i=0;
+    while(i<line.length){
+      const ch=line[i];
+      if(ch==='"'){let j=line.indexOf('"',i+1);if(j<0)j=line.length;out+=`<span class="sh-c">${esc(line.slice(i,j+1))}</span>`;i=j+1;}
+      else if(ch==='|'||ch===':'||ch==='['||ch===']'){out+=`<span class="sh-b">${esc(ch)}</span>`;i++;}
+      else if(ch==='^'||ch==='_'||ch==='='){let a=ch;if(line[i+1]===ch){a+=line[i+1];i++;}out+=`<span class="sh-a">${esc(a)}</span>`;i++;}
+      else if(ch==='z'||ch==='Z'){let r=ch;i++;while(i<line.length&&/[\d\/]/.test(line[i])){r+=line[i];i++;}out+=`<span class="sh-r">${esc(r)}</span>`;}
+      else if(/[A-Ga-g]/.test(ch)){let n=ch;i++;while(i<line.length&&(line[i]==="'"||line[i]===',')){n+=line[i];i++;}let l='';while(i<line.length&&/[\d\/]/.test(line[i])){l+=line[i];i++;}out+=`<span class="sh-n">${esc(n)}</span>`+(l?`<span class="sh-l">${esc(l)}</span>`:'');}
+      else{out+=esc(ch);i++;}
+    }
+    return out;
+  }).join('\n');
+}
+function updateHL(){codeHL.innerHTML=syntaxHL(abcTa.value)+'\n';codeHL.scrollTop=abcTa.scrollTop;}
+abcTa.addEventListener('scroll',()=>{codeHL.scrollTop=abcTa.scrollTop;});
+$('syntaxToggle').addEventListener('change',e=>{syntaxOn=e.target.checked;updateHL();});
+
+// ── Key line ──────────────────────────────────────────────────────────
+function buildKLine(){
+  const key=$('fKey').value, clefIsDefault=(state.clef===''||state.clef==='treble');
+  if(!key && clefIsDefault) return '';
+  const keyPart=key||'none', clefPart=(state.clef&&state.clef!=='treble')?' '+state.clef:'';
+  return `K:${keyPart}${clefPart}\n`;
+}
+function getHeader(){
+  const t=$('fTitle').value||'Mein Lied', c=$('fComposer').value;
+  const m=$('fMeter').value, q=$('fTempo').value||'120';
+  let h=`X:1\nT:${t}\n`; if(c) h+=`C:${c}\n`; if(m) h+=`M:${m}\n`;
+  h+=`L:1/4\nQ:${q}\n`; h+=buildKLine(); return h;
+}
+function getBody(){return abcTa.value.split('\n').filter(l=>!/^[XTCMLQKVRW]:/.test(l)).join('\n').trim();}
+function setTa(body){abcTa.value=getHeader()+(body?body+'\n':'');updateHL();}
+
+// ── Note click & drag ─────────────────────────────────────────────────
+function onNoteClick(abcElem,_t,_c,_a,drag){
+  if(!abcElem||drag) return;
+  paper0.querySelectorAll('.abcjs-highlight').forEach(el=>el.classList.remove('abcjs-highlight'));
+  if(abcElem.abselem?.elemset) abcElem.abselem.elemset.forEach(el=>{if(el)el.classList.add('abcjs-highlight');});
+  if(abcElem.startChar!=null){abcTa.focus();abcTa.setSelectionRange(abcElem.startChar,abcElem.endChar);const lh=parseInt(getComputedStyle(abcTa).lineHeight)||18;abcTa.scrollTop=Math.max(0,(abcTa.value.substring(0,abcElem.startChar).split('\n').length-1)*lh-30);}
+  if(abcElem.type==='note'&&ABCJS.synth.supportsAudio()) ABCJS.synth.playEvent(abcElem.midiPitches||[],abcElem.midiGraceNotePitches||[],800).catch(()=>{});
+}
+
+function pitchIdxFromMidi(midi){return CHROMATIC.findIndex(c=>c.midi===midi);}
+function abcNoteFromIdx(idx){idx=Math.max(0,Math.min(CHROMATIC.length-1,idx));return CHROMATIC[idx].abc;}
+
+function setupNoteDrag(){paper0.addEventListener('mousedown',onNoteMouseDown);}
+function onNoteMouseDown(e){
+  const noteEl=e.target.closest('[class*="abcjs-note"]'); if(!noteEl) return;
+  const abcElem=findAbcElemFromDomEl(noteEl);
+  if(!abcElem||abcElem.type!=='note'||abcElem.startChar==null) return;
+  const midiArr=abcElem.midiPitches||[]; if(!midiArr.length) return;
+  const midi=midiArr[0].pitch; let pitchIdx=pitchIdxFromMidi(midi); if(pitchIdx<0) pitchIdx=12;
+  e.preventDefault(); e.stopPropagation();
+  dragState={abcElem,startY:e.clientY,startPitchIdx:pitchIdx,currentPitchIdx:pitchIdx,noteEl,startChar:abcElem.startChar,endChar:abcElem.endChar,moved:false};
+  noteEl.classList.add('drag-active'); paper0.style.cursor='ns-resize';
+  dragTip.style.display='block'; updateDragTip(e,CHROMATIC[pitchIdx].abc);
+  document.addEventListener('mousemove',onDragMove); document.addEventListener('mouseup',onDragEnd);
+}
+function onDragMove(e){
+  if(!dragState) return;
+  const steps=Math.round((dragState.startY-e.clientY)/10);
+  const newIdx=Math.max(0,Math.min(CHROMATIC.length-1,dragState.startPitchIdx+steps));
+  if(newIdx!==dragState.currentPitchIdx){dragState.currentPitchIdx=newIdx;dragState.moved=true;const newAbc=abcNoteFromIdx(newIdx);updateDragTip(e,newAbc);applyNotePitchChange(newAbc);}
+  else updateDragTip(e,CHROMATIC[dragState.currentPitchIdx].abc);
+}
+function onDragEnd(e){
+  if(!dragState) return;
+  const wasMoved=dragState.moved;
+  dragState.noteEl.classList.remove('drag-active'); paper0.style.cursor='';
+  dragTip.style.display='none';
+  document.removeEventListener('mousemove',onDragMove); document.removeEventListener('mouseup',onDragEnd);
+  if(!wasMoved){
+    const ae=dragState.abcElem;
+    if(ae.midiPitches&&ABCJS.synth.supportsAudio()) ABCJS.synth.playEvent(ae.midiPitches||[],ae.midiGraceNotePitches||[],800).catch(()=>{});
+    if(ae.startChar!=null){abcTa.focus();abcTa.setSelectionRange(ae.startChar,ae.endChar);}
+    paper0.querySelectorAll('.abcjs-highlight').forEach(el=>el.classList.remove('abcjs-highlight'));
+    if(ae.abselem?.elemset) ae.abselem.elemset.forEach(el=>{if(el)el.classList.add('abcjs-highlight');});
+  }
+  dragState=null;
+}
+function updateDragTip(e,noteAbc){
+  const panel=$('scorePanel').getBoundingClientRect();
+  const entry=CHROMATIC.find(c=>c.abc===noteAbc)||{midi:'?'};
+  dragTip.textContent=noteAbc+' (MIDI '+entry.midi+')';
+  dragTip.style.left=(e.clientX-panel.left+14)+'px';
+  dragTip.style.top=(e.clientY-panel.top-32)+'px';
+}
+function applyNotePitchChange(newAbcNote){
+  if(!dragState) return;
+  const text=abcTa.value,s=dragState.startChar,e2=dragState.endChar;
+  const orig=text.slice(s,e2);
+  const lenMatch=orig.match(/[A-Ga-z^_=,']*([\d\/]+.*)$/);
+  const lenSuffix=lenMatch?lenMatch[1]:'';
+  const newToken=newAbcNote+lenSuffix;
+  abcTa.value=text.slice(0,s)+newToken+text.slice(e2);
+  dragState.endChar=s+newToken.length;
+  updateHL(); scheduleRender();
+  if(ABCJS.synth.supportsAudio()){
+    const midi=(CHROMATIC.find(c=>c.abc===newAbcNote)||{}).midi;
+    if(midi!=null) ABCJS.synth.playEvent([{pitch:midi,volume:80,duration:0.3,instrument:0,start:0,gap:0}],[],300).catch(()=>{});
+  }
+}
+function findAbcElemFromDomEl(domEl){
+  if(!visualObj) return null;
+  for(const line of(visualObj[0]?.lines||[])) for(const staff of(line.staff||[])) for(const voice of(staff.voices||[])) for(const elem of voice)
+    if(elem.abselem?.elemset) for(const svgEl of elem.abselem.elemset) if(svgEl&&(svgEl===domEl||svgEl.contains(domEl)||domEl.contains(svgEl))) return elem;
+  return null;
+}
+
+// ── Render ────────────────────────────────────────────────────────────
+function renderAbc(){
+  const abc=abcTa.value; errBox.style.display='none'; warnTa.style.display='none'; const warns=[];
+  try{
+    visualObj=ABCJS.renderAbc('paper0',abc,{responsive:'resize',add_classes:true,clickListener:onNoteClick,visualTranspose:state.transpose,scale:zoomLevel/100,warningCallback:w=>warns.push(w)});
+    if(warns.length){errBox.textContent='⚠ '+warns[0];errBox.style.display='block';warnTa.textContent='⚠ '+warns[0];warnTa.style.display='block';}
+    updateStats(abc);
+    paper0.querySelectorAll('[class*="abcjs-note"]').forEach(el=>el.style.cursor='grab');
+    buildPlayer();
+  }catch(e){errBox.textContent='✗ '+e.message;errBox.style.display='block';}
+}
+function updateStats(abc){
+  const n=(abc.match(/[A-Ga-gz][,']*[\d\/]*/g)||[]).filter(x=>!/^[XTCMLQKVRW]$/.test(x));
+  const b=(abc.match(/\|/g)||[]).length;
+  noteCount.textContent=n.length+' Noten'; barCount.textContent=Math.max(1,b)+' Takte';
+}
+
+// ── Player ────────────────────────────────────────────────────────────
+async function buildPlayer(){
+  if(!visualObj||!visualObj[0]||!ABCJS.synth.supportsAudio()) return;
+  try{
+    synthControl=new ABCJS.synth.SynthController();
+    synthControl.load('#player',createCursorControl(),{displayLoop:true,displayRestart:true,displayPlay:true,displayProgress:true,displayWarp:true,displayVolume:true});
+    await synthControl.setTune(visualObj[0],false,{});
+  }catch(e){console.warn(e);}
+}
+function createCursorControl(){
+  return{
+    onStart(){paper0.querySelectorAll('.abcjs-cursor').forEach(el=>el.setAttribute('display','block'));},
+    onEvent(ev){
+      if(!ev) return;
+      paper0.querySelectorAll('.abcjs-cursor').forEach(el=>{if(ev.left!=null){el.setAttribute('x1',ev.left);el.setAttribute('x2',ev.left);}if(ev.top!=null)el.setAttribute('y1',ev.top);if(ev.height!=null)el.setAttribute('y2',ev.top+ev.height);});
+      paper0.querySelectorAll('.abcjs-highlight').forEach(el=>el.classList.remove('abcjs-highlight'));
+      if(ev.elements) ev.elements.forEach(arr=>{if(Array.isArray(arr))arr.forEach(el=>{if(el)el.classList.add('abcjs-highlight');});else if(arr)arr.classList.add('abcjs-highlight');});
+      if(ev.startChar!=null){abcTa.setSelectionRange(ev.startChar,ev.endChar);const lh=parseInt(getComputedStyle(abcTa).lineHeight)||18;abcTa.scrollTop=Math.max(0,(abcTa.value.substring(0,ev.startChar).split('\n').length-1)*lh-30);}
+    },
+    onFinished(){paper0.querySelectorAll('.abcjs-cursor').forEach(el=>{el.setAttribute('x1',0);el.setAttribute('x2',0);el.setAttribute('y1',0);el.setAttribute('y2',0);});paper0.querySelectorAll('.abcjs-highlight').forEach(el=>el.classList.remove('abcjs-highlight'));}
+  };
+}
+
+function scheduleRender(){clearTimeout(rt);rt=setTimeout(()=>{renderAbc();updateHL();},250);}
+abcTa.addEventListener('input',()=>{updateHL();scheduleRender();});
+
+function insertAtCursor(text){
+  const ta=abcTa,s=ta.selectionStart,e=ta.selectionEnd;
+  const before=ta.value.slice(0,s),after=ta.value.slice(e);
+  const sp=(before.length>0&&!/[\s\n|:]$/.test(before))?' ':'';
+  ta.value=before+sp+text+after;
+  const p=s+sp.length+text.length; ta.setSelectionRange(p,p); ta.focus();
+  updateHL(); scheduleRender();
+}
+function deleteLast(){
+  const ta=abcTa,lines=ta.value.split('\n');
+  const bi=lines.findIndex(l=>!/^[XTCMLQKVRW]:/.test(l)); if(bi<0) return;
+  const header=lines.slice(0,bi),body=lines.slice(bi).join('\n').trimEnd();
+  ta.value=header.join('\n')+(header.length?'\n':'')+body.replace(/\s+\S+$/,'').trimEnd()+(body.trim()?'\n':'');
+  updateHL(); scheduleRender();
+}
+
+document.querySelectorAll('[data-acc]').forEach(btn=>btn.addEventListener('click',()=>{state.acc=btn.dataset.acc;document.querySelectorAll('[data-acc]').forEach(b=>b.classList.remove('active'));btn.classList.add('active');}));
+document.querySelectorAll('[data-len]').forEach(btn=>btn.addEventListener('click',()=>{state.len=btn.dataset.len;document.querySelectorAll('[data-len]').forEach(b=>b.classList.remove('active'));btn.classList.add('active');}));
+$('addRest').addEventListener('click',()=>insertAtCursor('z'+(state.len!=='1'?state.len:'')));
+$('addBar').addEventListener('click',()=>insertAtCursor('|'));
+$('addRepO').addEventListener('click',()=>insertAtCursor('|:'));
+$('addRepC').addEventListener('click',()=>insertAtCursor(':|'));
+$('addNl').addEventListener('click',()=>{const ta=abcTa,s=ta.selectionStart;ta.value=ta.value.slice(0,s)+'\n'+ta.value.slice(s);ta.setSelectionRange(s+1,s+1);ta.focus();updateHL();scheduleRender();});
+$('delLast').addEventListener('click',deleteLast);
+$('zoomSlider').addEventListener('input',()=>{zoomLevel=parseInt($('zoomSlider').value);$('zoomVal').textContent=zoomLevel+'%';scheduleRender();});
+['fTitle','fComposer','fMeter','fKey','fTempo'].forEach(id=>{$(id).addEventListener('input',()=>{setTa(getBody());scheduleRender();});});
+document.querySelectorAll('.tab').forEach(tab=>tab.addEventListener('click',()=>{const t=tab.dataset.tab;document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));tab.classList.add('active');$(t)?.classList.add('active');}));
+
+const templates={
+  tpl1:`X:1\nT:Hänschen Klein\nC:Volkslied\nM:4/4\nL:1/4\nQ:110\nK:G\nD2 B2 | A2 G2 | F2 F2 | E2 E2 |\nD2 E2 | F2 F2 | E4 |\nD2 B2 | A2 G2 | F2 F2 | E2 E2 |\nD2 D2 | G4 |\nA2 A2 | A2 G2 | F2 F2 | E4 |\nA2 A2 | A2 G2 | F2 F2 | E4 |\nD2 B2 | A2 G2 | F2 F2 | E2 E2 |\nD4 |]`,
+  tpl2:`X:1\nT:C-Dur Tonleiter\nM:4/4\nL:1/4\nQ:100\nK:C\nC D E F | G A B c | c B A G | F E D C |]`,
+  tpl3:`X:1\nT:Walzer\nM:3/4\nL:1/4\nQ:150\nK:C\n|:G E G | A F A | B G B | c2 z |\nG E G | A F A | G3 :|`,
+  tpl4:`X:1\nT:Ode an die Freude\nC:L. v. Beethoven\nM:4/4\nL:1/4\nQ:100\nK:C\nE E F G | G F E D | C C D E | E3/2 D/ D2 |\nE E F G | G F E D | C C D E | D3/2 C/ C2 |\nD D E C | D E/2F/2 E C | D E/2F/2 E D | C D G2 |\nE E F G | G F E D | C C D E | D3/2 C/ C2 |]`,
+  tpl5:`X:1\nT:Cooley's\nM:4/4\nL:1/8\nR:reel\nK:Emin\n|:D2|"Em"EB{c}BA B2 EB|~B2 AB dBAG|"D"FDAD BDAD|FDAD dAFD|\n"Em"EBBA B2 EB|B2 AB defg|"D"afe^c dBAF|"Em"DEFD E2:|\n|:gf|"Em"eB B2 efge|eB B2 gedB|"D"A2 FA DAFA|A2 FA defg|\n"Em"eB B2 eBgB|eB B2 defg|"D"afe^c dBAF|"Em"DEFD E2:|`
+};
+Object.keys(templates).forEach(id=>{
+  $(id)?.addEventListener('click',()=>{
+    abcTa.value=templates[id];
+    const fs={fTitle:/^T:(.+)$/m,fComposer:/^C:(.+)$/m};
+    Object.entries(fs).forEach(([fid,rx])=>{const m=abcTa.value.match(rx);if(m)$(fid).value=m[1].trim();});
+    const mm=abcTa.value.match(/^M:(.+)$/m); $('fMeter').value=mm?mm[1].trim():'';
+    const km=abcTa.value.match(/^K:(\S+)(?:\s+(\w+))?/m);
+    if(km){const kv=km[1]==='none'?'':km[1];$('fKey').value=kv;const cl=km[2]||'treble';state.clef=cl;document.querySelectorAll('[data-clef]').forEach(b=>b.classList.toggle('active',b.dataset.clef===cl));}
+    else{$('fKey').value='';state.clef='treble';document.querySelectorAll('[data-clef]').forEach(b=>b.classList.toggle('active',b.dataset.clef==='treble'));}
+    const q=abcTa.value.match(/^Q:(\d+)/m); if(q) $('fTempo').value=q[1];
+    updateHL(); scheduleRender();
+    actionMsg.textContent='✓ Vorlage geladen'; setTimeout(()=>actionMsg.textContent='',2000);
+  });
+});
+$('btnClear').addEventListener('click',()=>{if(confirm('Alles löschen?')){setTa('');scheduleRender();}});
+$('btnCopy').addEventListener('click',()=>{navigator.clipboard.writeText(abcTa.value).then(()=>{actionMsg.textContent='✓ Kopiert!';setTimeout(()=>actionMsg.textContent='',2000);});});
+$('dlAbc').addEventListener('click',()=>{const a=document.createElement('a');a.href='data:text/plain;charset=utf-8,'+encodeURIComponent(abcTa.value);a.download=($('fTitle').value||'lied').replace(/\s+/g,'_')+'.abc';a.click();});
+$('dlMidi').addEventListener('click',()=>{if(!visualObj||!visualObj[0])return;try{const d=ABCJS.synth.getMidiFile(abcTa.value,{midiOutputType:'encoded'});if(!d){alert('MIDI nicht verfügbar');return;}const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([d],{type:'audio/midi'}));a.download=($('fTitle').value||'lied').replace(/\s+/g,'_')+'.midi';a.click();}catch(e){alert('MIDI-Fehler: '+e.message);}});
+$('dlWav').addEventListener('click',async()=>{if(!visualObj||!visualObj[0])return;try{const buf=new ABCJS.synth.CreateSynth();await buf.init({visualObj:visualObj[0]});await buf.prime();const d=await buf.download();const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([d],{type:'audio/wav'}));a.download=($('fTitle').value||'lied').replace(/\s+/g,'_')+'.wav';a.click();}catch(e){console.warn(e);}});
+
+// Init
+buildNoteButtons();
+setTa('C D E F | G A B c |]');
+renderAbc();
+setupNoteDrag();
+</script>
+</body>
+</html>
