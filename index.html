@@ -948,8 +948,10 @@ document.querySelectorAll('[data-vreg]').forEach(btn=>{
     const v=parseInt(btn.dataset.vreg),val=btn.dataset.regval;
     voiceState[v].register=val;
     document.querySelectorAll('[data-vreg="'+v+'"]').forEach(b=>b.classList.toggle('active',b.dataset.regval===val));
-    document.getElementById('regPill'+v).className='reg-pill '+val;
-    if(activeVoice===v){state.register=val;buildNoteButtons();}
+    const rp=document.getElementById('regPill'+v); if(rp) rp.className='reg-pill '+val;
+    if(activeVoice===v){state.register=val;}
+    buildNoteButtons();
+    if(voiceMode==='multi') updateHeaderOnly();   // write/remove octave= on this voice's V: line
   });
 });
 
@@ -1032,7 +1034,8 @@ function getHeader(){
       const vd=VOICE_DEFS[i-1], vst=voiceState[i];
       const clef=vst.clef||vd.clef;
       const nm=(vst.name!=null&&vst.name!=='')?vst.name:vd.name;
-      h+='V:'+i+' clef='+clef+' stem='+vd.stem+' name="'+nm.replace(/"/g,'')+'"\n';
+      const regOct=(vst.register==='up')?1:0;   // Hoch → eine Oktave höher
+      h+='V:'+i+' clef='+clef+(regOct?' octave='+regOct:'')+' stem='+vd.stem+' name="'+nm.replace(/"/g,'')+'"\n';
     }
     // Global K:
     const key=$('fKey').value;
@@ -1154,10 +1157,13 @@ function buildNoteButtons(){
   const vdef=VOICE_DEFS[activeVoice-1];
   lbl.innerHTML='<span style="color:var(--v'+activeVoice+');font-weight:700">'+vdef.short+'</span> '+t('tb.note');
   grp.appendChild(lbl);
-  const reg=voiceMode==='multi'?voiceState[activeVoice].register:state.register;
-  const oct=voiceMode==='multi'?voiceState[activeVoice].octave:state.octave;
+  const multi=voiceMode==='multi';
+  const reg=multi?voiceState[activeVoice].register:state.register;
+  const oct=multi?voiceState[activeVoice].octave:state.octave;
   NOTE_DEFS.forEach(n=>{
-    const isUp=reg==='up',base=isUp?n.lower:n.upper,final=applyOctaveToNote(base,oct);
+    // In multi-voice mode the octave is carried by octave= on the V: line,
+    // so note entry is decoupled from the register (always base/upper case).
+    const isUp=multi?false:(reg==='up'),base=isUp?n.lower:n.upper,final=applyOctaveToNote(base,oct);
     const btn=document.createElement('button');btn.className='btn note-btn';btn.dataset.note=final;
     const isLong=final.length>2;
     if(state.nameSys==='letter')btn.innerHTML='<span class="nb-main" style="font-size:'+(isLong?'10px':'13px')+'">'+final+'</span>';
