@@ -189,6 +189,9 @@ html,body{height:100vh;background:var(--bg-page);font-family:system-ui,-apple-sy
 .voice-settings[data-vs="3"]{border-color:var(--v3-border);background:var(--v3-bg)}
 .voice-settings[data-vs="4"]{border-color:var(--v4-border);background:var(--v4-bg)}
 .voice-settings-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;display:flex;align-items:center;gap:5px}
+.vname-input{font-size:11px;font-weight:700;text-transform:none;letter-spacing:.02em;color:var(--text);background:var(--bg-primary);border:1px solid var(--border);border-radius:5px;padding:2px 6px;width:90px;font-family:inherit}
+.vname-input:focus{outline:none;border-color:var(--accent);background:var(--bg-secondary)}
+.vname-vtag{font-size:10px;color:var(--text2);font-weight:600}
 .voice-settings[data-vs="1"] .voice-settings-title{color:var(--v1)}
 .voice-settings[data-vs="2"] .voice-settings-title{color:var(--v2)}
 .voice-settings[data-vs="3"] .voice-settings-title{color:var(--v3)}
@@ -444,7 +447,7 @@ input[type=checkbox]{accent-color:var(--blue)}
     <div class="stitle" data-i18n="vsettings.title">Stimmen-Einstellungen</div>
     <!-- Voice 1 -->
     <div class="voice-settings" data-vs="1" id="vs1">
-      <div class="voice-settings-title"><span class="vs-dot"></span><span data-i18n="voice.soprano">Sopran</span> (V:1)</div>
+      <div class="voice-settings-title"><span class="vs-dot"></span><input class="vname-input" data-vname="1" value="Sopran" spellcheck="false" maxlength="24"><span class="vname-vtag">(V:1)</span></div>
       <div class="fl">
         <label class="flabel" data-i18n="clef.label">Schlüssel</label>
         <div class="clef-row">
@@ -465,7 +468,7 @@ input[type=checkbox]{accent-color:var(--blue)}
     </div>
     <!-- Voice 2 -->
     <div class="voice-settings" data-vs="2" id="vs2">
-      <div class="voice-settings-title"><span class="vs-dot"></span><span data-i18n="voice.alt">Alt</span> (V:2)</div>
+      <div class="voice-settings-title"><span class="vs-dot"></span><input class="vname-input" data-vname="2" value="Alt" spellcheck="false" maxlength="24"><span class="vname-vtag">(V:2)</span></div>
       <div class="fl">
         <label class="flabel" data-i18n="clef.label">Schlüssel</label>
         <div class="clef-row">
@@ -486,7 +489,7 @@ input[type=checkbox]{accent-color:var(--blue)}
     </div>
     <!-- Voice 3 -->
     <div class="voice-settings" data-vs="3" id="vs3">
-      <div class="voice-settings-title"><span class="vs-dot"></span><span data-i18n="voice.tenor">Tenor</span> (V:3)</div>
+      <div class="voice-settings-title"><span class="vs-dot"></span><input class="vname-input" data-vname="3" value="Tenor" spellcheck="false" maxlength="24"><span class="vname-vtag">(V:3)</span></div>
       <div class="fl">
         <label class="flabel" data-i18n="clef.label">Schlüssel</label>
         <div class="clef-row">
@@ -507,7 +510,7 @@ input[type=checkbox]{accent-color:var(--blue)}
     </div>
     <!-- Voice 4 -->
     <div class="voice-settings" data-vs="4" id="vs4">
-      <div class="voice-settings-title"><span class="vs-dot"></span><span data-i18n="voice.bass">Bass</span> (V:4)</div>
+      <div class="voice-settings-title"><span class="vs-dot"></span><input class="vname-input" data-vname="4" value="Bass" spellcheck="false" maxlength="24"><span class="vname-vtag">(V:4)</span></div>
       <div class="fl">
         <label class="flabel" data-i18n="clef.label">Schlüssel</label>
         <div class="clef-row">
@@ -803,10 +806,10 @@ const VOICE_DEFS=[
 
 // Per-voice state
 const voiceState = {
-  1:{clef:'treble', register:'down', octave:0},
-  2:{clef:'treble', register:'down', octave:0},
-  3:{clef:'alto',   register:'up',   octave:0},
-  4:{clef:'bass',   register:'down', octave:0},
+  1:{clef:'treble', register:'down', octave:0, name:'Sopran'},
+  2:{clef:'treble', register:'down', octave:0, name:'Alt'},
+  3:{clef:'alto',   register:'up',   octave:0, name:'Tenor'},
+  4:{clef:'bass',   register:'down', octave:0, name:'Bass'},
 };
 
 const state={acc:'',len:'1',octave:0,transpose:0,clef:'treble',nameSys:'letter',register:'down'};
@@ -928,6 +931,17 @@ document.querySelectorAll('[data-vclef]').forEach(btn=>{
   });
 });
 
+// ── Per-voice editable name (writes name="…" into the V: header line) ──
+document.querySelectorAll('[data-vname]').forEach(inp=>{
+  const apply=()=>{
+    const v=parseInt(inp.dataset.vname);
+    voiceState[v].name=inp.value.trim();
+    if(voiceMode==='multi') updateHeaderOnly();
+  };
+  inp.addEventListener('input',apply);
+  inp.addEventListener('change',apply);
+});
+
 // ── Per-voice register buttons ────────────────────────────────────────
 document.querySelectorAll('[data-vreg]').forEach(btn=>{
   btn.addEventListener('click',()=>{
@@ -1017,7 +1031,8 @@ function getHeader(){
     for(let i=1;i<=n;i++){
       const vd=VOICE_DEFS[i-1], vst=voiceState[i];
       const clef=vst.clef||vd.clef;
-      h+='V:'+i+' clef='+clef+' stem='+vd.stem+' name="'+vd.name+'"\n';
+      const nm=(vst.name!=null&&vst.name!=='')?vst.name:vd.name;
+      h+='V:'+i+' clef='+clef+' stem='+vd.stem+' name="'+nm.replace(/"/g,'')+'"\n';
     }
     // Global K:
     const key=$('fKey').value;
