@@ -7,10 +7,12 @@ on:
       - 'index.html'
       - 'android/**'
       - '.github/workflows/android.yml'
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -50,9 +52,25 @@ jobs:
         working-directory: android
         run: gradle assembleDebug --no-daemon
 
-      - name: Upload APK
+      - name: Upload APK (build artifact)
         uses: actions/upload-artifact@v4
         with:
           name: abc-editor-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+
+      # On a version tag (e.g. v1.0.0): publish a downloadable GitHub Release
+      - name: Rename APK for release
+        if: startsWith(github.ref, 'refs/tags/')
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk "ABC-Editor-${{ github.ref_name }}.apk"
+
+      - name: Publish Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ABC Editor ${{ github.ref_name }}
+          files: ABC-Editor-${{ github.ref_name }}.apk
+          generate_release_notes: true
+          body: |
+            Android-App (Debug-signiert, installierbar). APK unten unter **Assets** herunterladen.
+            Installation: Datei öffnen und „Aus unbekannten Quellen installieren" erlauben.
