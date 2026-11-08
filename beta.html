@@ -129,12 +129,18 @@ button{font-family:inherit}
       <h3>ABC-Code</h3>
       <textarea id="abcTa" spellcheck="false"></textarea>
       <div class="mact">
+        <button id="btnApplyAbc">↻ ABC übernehmen</button>
         <button id="btnCopy">Kopieren</button>
         <button id="btnAbc">⬇ ABC</button>
         <button id="btnPrint">🖨 PDF-Vorschau</button>
         <button id="btnMidi" style="display:none">⬇ MIDI</button>
         <button id="btnMp3" style="display:none">⬇ MP3</button>
       </div>
+      <h3>Vorlagen</h3>
+      <div class="mact" id="tplRow"></div>
+      <h3>Gespeicherte Lieder</h3>
+      <div id="savedList" style="margin:0 12px"></div>
+      <div class="mact"><button id="btnSaveSong">＋ Aktuelles Lied speichern</button></div>
     </div>
     <div class="backdrop" id="backdrop"></div>
 
@@ -248,6 +254,99 @@ const KEYS=[
 function keyAbc(key){ // K: field
   const L=key.letter + (key.acc===1?'#':key.acc===-1?'b':'');
   return L + (key.mode==='min'?'m':'');
+}
+// parse a K: value like "Bbm", "D", "F#m" into {letter,acc,mode}
+function parseKey(s){
+  const m=(s||'').match(/^([A-G])(#|b)?(m)?/i); if(!m) return {letter:'C',acc:0,mode:'maj'};
+  return {letter:m[1].toUpperCase(), acc:m[2]==='#'?1:m[2]==='b'?-1:0, mode:m[3]?'min':'maj'};
+}
+// tokenize one ABC body string into tokens, using the current key signature `sig`
+function parseBody(body, sig){
+  const toks=[]; const lines=body.split('\n');
+  lines.forEach((line,li)=>{
+    if(li>0) toks.push({t:'',kind:'newline'});
+    let i=0; const s=line;
+    while(i<s.length){
+      const c=s[i];
+      if(c===' '||c==='\t'){ i++; continue; }
+      if(c==='x'||c==='X'){ // placeholder rest – skip with its length
+        i++; while(i<s.length&&/[0-9\/]/.test(s[i]))i++; continue;
+      }
+      // bar / repeat
+      if(c==='|'||c===':'){ let bar=''; while(i<s.length&&/[|:\]\[]/.test(s[i])){bar+=s[i];i++;} if(bar) toks.push({t:bar,kind:'bar'}); continue; }
+      // rest
+      if(c==='z'||c==='Z'){ let r='z'; i++; let suf=''; while(i<s.length&&/[0-9\/]/.test(s[i])){suf+=s[i];i++;} toks.push({t:'z'+suf,kind:'rest'}); continue; }
+      // note: optional accidental, letter, octave marks, length
+      const nm=s.slice(i).match(/^(\^\^|__|\^|_|=)?([A-Ga-g])([,']*)([0-9]*\/*[0-9]*)/);
+      if(nm){
+        const accCh=nm[1]||'', L=nm[2], oct=nm[3]||'', suf=nm[4]||'';
+        const letter=L.toUpperCase();
+        let acc = accCh==='^'?1:accCh==='_'?-1:accCh==='='?0:accCh==='^^'?2:accCh==='__'?-2: (sig[letter]!==undefined?sig[letter]:0);
+        let o = (L===L.toLowerCase())?5:4;
+        for(const ch of oct){ if(ch===',')o--; else if(ch==="'")o++; }
+        const midi = 12*(o+1) + NAT[letter] + acc;
+        toks.push({t:accCh+L+oct+suf, kind:'note', midi});
+        i+=nm[0].length; continue;
+      }
+      i++; // skip unknown char
+    }
+  });
+  // drop a trailing empty newline
+  while(toks.length && toks[toks.length-1].kind==='newline') toks.pop();
+  return toks;
+}
+// parse a full ABC string back into state; returns true on success
+function loadAbc(abc){
+  try{
+    const km=abc.match(/^K:\s*(\S+)/m); state.key = km?parseKey(km[1]):{letter:'C',acc:0,mode:'maj'};
+    KM=keyMap(state.key);
+    const tm=abc.match(/^T:(.*)$/m); $('fTitle').value=tm?tm[1].trim():'';
+    const cm=abc.match(/^C:(.*)$/m); $('fComposer').value=cm?cm[1].trim():'';
+    const mm=abc.match(/^M:(.*)$/m); if(mm)$('fMeter').value=mm[1].trim();
+    const qm=abc.match(/^Q:(?:[^=\n]*=)?(\d+)/m); if(qm)$('fTempo').value=qm[1];
+    const multi = /^%%score|^%%staves|^V:/m.test(abc);
+    // reset voices
+    state.voices=[newVoice(VOICE_DEFS[0]),newVoice(VOICE_DEFS[1]),newVoice(VOICE_DEFS[2]),newVoice(VOICE_DEFS[3])];
+    const idIndex={S:0,A:1,T:2,B:3,'1':0,'2':1,'3':2,'4':3};
+    if(multi){
+      const lines=abc.split('\n'); let cur=-1, bodies=['','','',''];
+      const vdef=/^V:\s*(\S+)(.*)$/;
+      for(const line of lines){
+        if(/^[A-Za-z]:/.test(line) && !/^V:/.test(line)) continue;      // other header
+        if(line.startsWith('%')) continue;
+        const vm=line.match(vdef);
+        if(vm){ cur=idIndex[vm[1]]!==undefined?idIndex[vm[1]]:-1;
+          if(cur>=0){ const cl=(vm[2].match(/clef=(\w+)/)||[])[1]; if(cl)state.voices[cur].clef=cl;
+            const nn=(vm[2].match(/name="([^"]*)"/)||[])[1]; if(nn)state.voices[cur].name=nn; }
+          continue; }
+        // inline [V:x] prefix
+        const inl=line.match(/^\[V:\s*(\S+?)\]\s*(.*)$/);
+        if(inl){ const vi=idIndex[inl[1]]; if(vi!==undefined){ bodies[vi]+=(bodies[vi]?'\n':'')+inl[2]; } continue; }
+        if(cur>=0){ bodies[cur]+=(bodies[cur]?'\n':'')+line; }
+      }
+      let n=0;
+      for(let vi=0;vi<4;vi++){ if(bodies[vi].trim()){ state.voices[vi].tokens=parseBody(bodies[vi],KM.sig); n=Math.max(n,vi+1); } }
+      state.voiceMode='multi'; state.voiceCount=Math.max(2,Math.min(4,n)); state.activeVoice=0;
+      $('fVoiceMode').value='multi'; $('fVoiceCount').value=String(state.voiceCount);
+    } else {
+      // single: body = lines after K: that aren't headers
+      const lines=abc.split('\n'); let started=false, body='';
+      for(const line of lines){
+        if(/^K:/.test(line)){ started=true; continue; }
+        if(!started) continue;
+        if(/^[A-Za-z]:/.test(line)||line.startsWith('%')) continue;
+        body+=(body?'\n':'')+line;
+      }
+      const cl=(abc.match(/^K:[^\n]*clef=(\w+)/m)||[])[1]; if(cl){ state.voices[0].clef=cl; $('fClef').value=cl; }
+      state.voices[0].tokens=parseBody(body,KM.sig);
+      state.voiceMode='single'; state.activeVoice=0; $('fVoiceMode').value='single';
+    }
+    $('keyBtn').textContent=keyLabel()+' ▾';
+    $('voiceCountRow').hidden=(state.voiceMode!=='multi');
+    $('clefRow').hidden=(state.voiceMode==='multi');
+    buildVoicebar(); buildVoiceEditors(); buildKeyboard(); scrollToRoot(); render(true);
+    return true;
+  }catch(e){ console.warn('loadAbc',e); return false; }
 }
 
 /* ================= voices ================= */
@@ -737,9 +836,51 @@ $('micRange').onchange=()=>micCfg.range=$('micRange').value;
 $('micGate').oninput=()=>micCfg.gate=parseInt($('micGate').value)/1000;
 $('micDsp').onchange=()=>micCfg.browserDsp=$('micDsp').checked;
 
+/* ================= templates + saved songs ================= */
+const TEMPLATES=[
+  ['C-Dur Tonleiter','X:1\nT:C-Dur Tonleiter\nM:4/4\nL:1/4\nQ:1/4=100\nK:C clef=treble\nC D E F | G A B c | c B A G | F E D C |'],
+  ['Hänschen Klein','X:1\nT:Hänschen Klein\nC:Volkslied\nM:4/4\nL:1/4\nQ:1/4=110\nK:G clef=treble\nd B B | A G G | G A B c | d d d |\nd B B | A G G | G B d B | G G G |'],
+  ['Walzer','X:1\nT:Walzer\nM:3/4\nL:1/4\nQ:1/4=150\nK:C clef=treble\nG E G | A F A | B G B | c c c |\nG E G | A F A | G G G |'],
+  ['SATB Beispiel','X:1\nT:SATB Beispiel\nM:4/4\nL:1/4\nQ:1/4=100\n%%score (S A T B)\nK:C\nV:S clef=treble name="Sopran"\nc d e f | g a g f | e e c c |\nV:A clef=treble name="Alt"\nE F G A | B c B A | G G E E |\nV:T clef=treble name="Tenor"\nG, A, B, C | D E D C | B, B, G, G, |\nV:B clef=bass name="Bass"\nC, C, G,, C, | G,, C, G,, C, | C, C, C, C, |'],
+];
+function buildTemplates(){
+  const r=$('tplRow'); r.innerHTML='';
+  TEMPLATES.forEach(([name,abc])=>{
+    const b=document.createElement('button'); b.textContent=name;
+    b.onclick=()=>{ loadAbc(abc); $('app').classList.remove('menu-open'); };
+    r.appendChild(b);
+  });
+}
+const SAVE_KEY='abcBetaSongs';
+function getSaved(){ try{ return JSON.parse(localStorage.getItem(SAVE_KEY)||'[]'); }catch(e){ return []; } }
+function setSaved(a){ try{ localStorage.setItem(SAVE_KEY,JSON.stringify(a)); }catch(e){ alert('Speichern nicht möglich (Speicher blockiert).'); } }
+function renderSaved(){
+  const list=$('savedList'); list.innerHTML='';
+  const songs=getSaved();
+  if(!songs.length){ list.innerHTML='<div style="font-size:11px;color:var(--text2);font-style:italic">Noch nichts gespeichert.</div>'; return; }
+  songs.forEach((song,i)=>{
+    const row=document.createElement('div'); row.style.cssText='display:flex;gap:4px;margin-bottom:4px';
+    const load=document.createElement('button'); load.className=''; load.style.cssText='flex:1;border:1.5px solid var(--border);border-radius:8px;background:var(--bg);font-size:12px;font-weight:600;padding:6px 8px;cursor:pointer;text-align:left';
+    load.textContent='💾 '+song.name;
+    load.onclick=()=>{ loadAbc(song.abc); $('app').classList.remove('menu-open'); };
+    const del=document.createElement('button'); del.textContent='🗑'; del.style.cssText='border:1.5px solid var(--border);border-radius:8px;background:var(--bg);font-size:12px;padding:6px 9px;cursor:pointer';
+    del.onclick=()=>{ if(confirm('„'+song.name+'“ löschen?')){ const s=getSaved(); s.splice(i,1); setSaved(s); renderSaved(); } };
+    row.appendChild(load); row.appendChild(del); list.appendChild(row);
+  });
+}
+$('btnSaveSong').onclick=()=>{
+  const name=prompt('Name des Liedes:', $('fTitle').value||'Lied'); if(!name) return;
+  const songs=getSaved(); const ex=songs.findIndex(s=>s.name===name);
+  const entry={name,abc:$('abcTa').value,saved:Date.now()};
+  if(ex>=0){ if(!confirm('„'+name+'“ überschreiben?')) return; songs[ex]=entry; } else songs.push(entry);
+  setSaved(songs); renderSaved();
+};
+$('btnApplyAbc').onclick=()=>{ loadAbc($('abcTa').value); };
+
 window.addEventListener('resize',()=>render(false));
 
 /* init */
+buildTemplates(); renderSaved();
 $('keyBtn').textContent='C-Dur ▾';
 buildKeyboard(); scrollToRoot(); render(true);
 </script>
