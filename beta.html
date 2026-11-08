@@ -31,6 +31,14 @@ button{font-family:inherit}
 #paper .abcjs-note{cursor:pointer}
 #paper .abcjs-v0{fill:#2d6cdf}#paper .abcjs-v1{fill:#d9534f}#paper .abcjs-v2{fill:#1d9a6c}#paper .abcjs-v3{fill:#b5651d}
 #hint{position:absolute;top:8px;left:10px;font-size:11px;color:var(--text2)}
+.micmon{position:sticky;bottom:6px;margin:8px auto 0;width:max-content;display:flex;align-items:center;gap:10px;background:var(--ink);color:#fff;border-radius:999px;padding:7px 14px;font-size:13px;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+.micmon[hidden]{display:none}
+.mm-note{font-weight:700;font-size:16px;min-width:34px;text-align:center}
+.mm-freq{color:#cfc9bd;font-size:11px}
+.mm-meter{width:70px;height:7px;background:#4a463f;border-radius:4px;overflow:hidden}
+.mm-meter i{display:block;height:100%;width:0;background:var(--yellow)}
+.mm-stop{background:var(--caret);border-radius:7px;padding:3px 9px;cursor:pointer;font-weight:700;font-size:12px}
+.tb-btn.listening{background:var(--caret);border-color:var(--caret);color:#fff}
 
 /* keyboard column */
 .kbd{background:var(--bg2);border-left:1.5px solid var(--border);display:flex;flex-direction:column;min-height:0}
@@ -109,6 +117,12 @@ button{font-family:inherit}
       <div class="mrow" id="voiceCountRow" hidden><label>Anzahl Stimmen</label>
         <select id="fVoiceCount"><option value="2">2 (S/A)</option><option value="3">3 (S/A/T)</option><option value="4">4 (S/A/T/B)</option></select></div>
       <div id="voiceEditors"></div>
+      <h3>Mikrofon (Singen → Noten)</h3>
+      <div class="mrow"><label>Stimmlage</label>
+        <select id="micRange"><option value="auto">Automatisch</option><option value="low">Tief (Bass/Tenor)</option><option value="mid">Mittel</option><option value="high">Hoch (Sopran)</option></select></div>
+      <div class="mrow"><label>Empfindlichkeit (Pegel-Schwelle)</label>
+        <input id="micGate" type="range" min="2" max="40" value="10"></div>
+      <div class="mrow"><label><input type="checkbox" id="micDsp" style="width:auto;margin-right:6px">Browser-Rauschunterdrückung</label></div>
       <h3>Darstellung <span style="text-transform:none;font-weight:400">(ändert Noten nicht)</span></h3>
       <div class="mrow" id="clefRow"><label>Notenschlüssel</label>
         <select id="fClef"><option value="treble">Violin</option><option value="bass">Bass</option><option value="alto">Alt</option></select></div>
@@ -125,6 +139,12 @@ button{font-family:inherit}
     <div class="result" id="resultWrap">
       <span id="hint">Tippe rechts eine Note · Grundton unten (orange)</span>
       <div id="paper"></div>
+      <div class="micmon" id="micMon" hidden>
+        <span class="mm-note" id="mmNote">—</span>
+        <span class="mm-freq" id="mmFreq">0 Hz</span>
+        <span class="mm-meter"><i id="mmLevel"></i></span>
+        <span class="mm-stop" id="mmStop">Stop</span>
+      </div>
     </div>
 
     <!-- KEYBOARD -->
@@ -482,6 +502,78 @@ function keyLabel(){
   return f?f[0]:'C-Dur';
 }
 
+/* ================= microphone → notes (YIN, offline) ================= */
+let micState=null;
+const micCfg={ gate:0.010, stableFrames:2, smoothWin:5, range:'auto', browserDsp:false };
+const MIC_RANGES={ auto:[70,1200], low:[70,400], mid:[130,700], high:[250,1100] };
+const MIC_NAMES=['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
+function micName(m){ return MIC_NAMES[((m%12)+12)%12]+(Math.floor(m/12)-1); }
+function yinDetect(buf, sr, gate){
+  const SIZE=buf.length, half=SIZE>>1;
+  let rms=0; for(let i=0;i<SIZE;i++){const v=buf[i];rms+=v*v;} rms=Math.sqrt(rms/SIZE);
+  if(rms<gate) return {freq:-1,rms};
+  const yin=new Float32Array(half);
+  for(let tau=1;tau<half;tau++){ let s=0; for(let i=0;i<half;i++){const d=buf[i]-buf[i+tau];s+=d*d;} yin[tau]=s; }
+  yin[0]=1; let run=0;
+  for(let tau=1;tau<half;tau++){ run+=yin[tau]; yin[tau]= run>0?yin[tau]*tau/run:1; }
+  const TH=0.18; let tau=-1;
+  for(let t=2;t<half;t++){ if(yin[t]<TH){ while(t+1<half&&yin[t+1]<yin[t])t++; tau=t; break; } }
+  if(tau===-1) return {freq:-1,rms};
+  const x0=tau>1?tau-1:tau, x2=tau+1<half?tau+1:tau; let bt=tau;
+  if(x0!==tau&&x2!==tau){ const s0=yin[x0],s1=yin[tau],s2=yin[x2],dn=(2*s1-s2-s0); if(dn!==0) bt=tau+(s2-s0)/(2*dn); }
+  return {freq:sr/bt,rms};
+}
+function micMedian(arr){ const a=arr.slice().sort((x,y)=>x-y),m=a.length>>1; return a.length%2?a[m]:Math.round((a[m-1]+a[m])/2); }
+function micLoop(){
+  if(!micState) return;
+  micState.analyser.getFloatTimeDomainData(micState.buf);
+  const {freq,rms}=yinDetect(micState.buf, micState.ctx.sampleRate, micCfg.gate);
+  const [fmin,fmax]=MIC_RANGES[micCfg.range]||MIC_RANGES.auto;
+  const voiced= freq>0 && freq>=fmin && freq<=fmax;
+  $('mmLevel').style.width=Math.min(100,Math.round(rms*450))+'%';
+  if(voiced){
+    const midi=Math.round(69+12*Math.log2(freq/440));
+    const h=micState.hist; h.push(midi); while(h.length>micCfg.smoothWin) h.shift();
+    const smooth=micMedian(h);
+    if(micState.cand===smooth){ micState.candCount++; } else { micState.cand=smooth; micState.candCount=1; }
+    const onset= micState.pendingOnset || (rms>micState.prevRms*1.6 && rms>micCfg.gate*2);
+    micState.prevRms=rms;
+    $('mmNote').textContent=micName(smooth); $('mmFreq').textContent=Math.round(freq)+' Hz';
+    if(micState.candCount>=micCfg.stableFrames && (smooth!==micState.emitted || onset)){
+      insertNote(smooth);
+      micState.emitted=smooth; micState.pendingOnset=false; micState.candCount=0;
+    }
+    micState.silence=0;
+  } else {
+    micState.prevRms=rms; micState.silence++;
+    $('mmNote').textContent='—'; $('mmFreq').textContent='0 Hz';
+    if(micState.silence>=3){ micState.pendingOnset=true; micState.emitted=null; micState.cand=null; micState.candCount=0; micState.hist.length=0; }
+  }
+  micState.raf=requestAnimationFrame(micLoop);
+}
+async function startMic(){
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){ alert('Mikrofon wird nicht unterstützt'); return; }
+  try{
+    const dsp=micCfg.browserDsp;
+    const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:dsp,noiseSuppression:dsp,autoGainControl:false}});
+    const ctx=new (window.AudioContext||window.webkitAudioContext)();
+    if(ctx.state==='suspended'){ try{ await ctx.resume(); }catch(e){} }
+    const src=ctx.createMediaStreamSource(stream);
+    const analyser=ctx.createAnalyser(); analyser.fftSize=2048; src.connect(analyser);
+    micState={stream,ctx,analyser,buf:new Float32Array(analyser.fftSize),emitted:null,cand:null,candCount:0,silence:0,hist:[],prevRms:0,pendingOnset:true,raf:null};
+    $('micBtn').classList.add('listening'); $('micMon').hidden=false;
+    micLoop();
+  }catch(e){ alert('Kein Zugriff auf das Mikrofon'); }
+}
+function stopMic(){
+  if(!micState) return;
+  cancelAnimationFrame(micState.raf);
+  try{ micState.stream.getTracks().forEach(tr=>tr.stop()); }catch(e){}
+  try{ micState.ctx.close(); }catch(e){}
+  micState=null;
+  $('micBtn').classList.remove('listening'); $('micMon').hidden=true;
+}
+
 /* ================= audio (click/play) ================= */
 // Auto-detect: Android WebView injects AndroidExport → use bundled local soundfont; web → CDN.
 const SOUNDFONT_URL=(typeof AndroidExport!=='undefined')?'soundfont/':'https://paulrosen.github.io/midi-js-soundfonts/abcjs/';
@@ -562,6 +654,12 @@ $('playBtn').onclick=async()=>{
     await s.prime(); s.start();
   }catch(e){ console.warn(e); }
 };
+
+$('micBtn').onclick=()=>{ if(micState) stopMic(); else startMic(); };
+$('mmStop').onclick=stopMic;
+$('micRange').onchange=()=>micCfg.range=$('micRange').value;
+$('micGate').oninput=()=>micCfg.gate=parseInt($('micGate').value)/1000;
+$('micDsp').onchange=()=>micCfg.browserDsp=$('micDsp').checked;
 
 window.addEventListener('resize',()=>render(false));
 
