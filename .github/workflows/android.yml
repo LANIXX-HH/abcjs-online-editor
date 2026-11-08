@@ -24,9 +24,10 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      # ubuntu-latest ships the Android SDK (platform-34, build-tools,
+      # accepted licenses); AGP finds it via ANDROID_HOME. No setup-android
+      # step needed — it currently fails trying to install the obsolete
+      # 'tools' package.
 
       - name: Embed web app + abcjs into the app (offline)
         run: |
