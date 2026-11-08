@@ -1,0 +1,385 @@
+<!DOCTYPE html><html lang="de"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>ABC-Editor (Beta)</title>
+<style>
+:root{
+  --ink:#2b2b2b; --bg:#fff; --bg2:#faf7ef; --bg3:#f1ede2; --border:#d9d3c5;
+  --text:#2b2b2b; --text2:#8a8378;
+  --yellow:#f5d470; --yellowdim:#f8e6ad; --root:#e3863a; --caret:#d93c2b; --accent:#2d6cdf;
+  --off:#f4f1e9; --offink:#b4ae9f;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;overflow:hidden}
+body{font-family:"Segoe UI",system-ui,sans-serif;color:var(--text);background:var(--bg3)}
+button{font-family:inherit}
+
+/* ---- layout ---- */
+.app{height:100dvh;display:grid;grid-template-rows:auto 1fr}
+.topbar{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg);border-bottom:1.5px solid var(--border)}
+.tb-btn{border:1.5px solid var(--border);border-radius:9px;background:var(--bg);color:var(--text);font-size:13px;font-weight:600;padding:6px 11px;cursor:pointer}
+.tb-btn.on{background:var(--yellow);border-color:#caa52a}
+.tb-title{font-weight:700;font-size:14px}
+.spacer{flex:1}
+.body{display:grid;grid-template-columns:1fr 128px;min-height:0;position:relative}
+.result{position:relative;overflow:auto;background:var(--bg);padding:6px 8px}
+#paper{min-height:100%}
+#hint{position:absolute;top:8px;left:10px;font-size:11px;color:var(--text2)}
+
+/* keyboard column */
+.kbd{background:var(--bg2);border-left:1.5px solid var(--border);display:flex;flex-direction:column;min-height:0}
+.kfnrow{display:flex;flex-direction:column;gap:4px;padding:6px 6px}
+.kfn{border:1.5px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:11px;font-weight:600;padding:6px 2px;cursor:pointer;text-align:center}
+.kfn.y{background:var(--yellow);border-color:#caa52a}
+.keys-scroll{flex:1;overflow-y:auto;overscroll-behavior:contain;padding:4px 0}
+.keys{position:relative;margin:0 6px}
+.wk{position:relative;border:1.5px solid var(--border);border-radius:8px;background:var(--off);height:38px;margin-bottom:4px;display:flex;align-items:center;justify-content:center;gap:5px;font-weight:700;font-size:13px;color:var(--offink);cursor:pointer;user-select:none}
+.wk .sf{font-style:italic;font-weight:500;font-size:11px;opacity:.85}
+.wk.inkey{background:var(--yellow);border-color:#caa52a;color:var(--ink)}
+.wk.root{background:var(--root);border-color:#b5651d;color:var(--ink)}
+.bk{position:absolute;left:2px;width:56%;height:24px;border-radius:6px;border:1.5px solid var(--border);background:var(--off);color:var(--offink);display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;cursor:pointer;user-select:none;z-index:3}
+.bk.inkey{background:#ecc24f;border-color:#b5651d;color:var(--ink)}
+.bk.root{background:var(--root);border-color:#b5651d;color:var(--ink)}
+.kactrow{display:flex;flex-direction:column;gap:4px;padding:6px 6px;border-top:1.5px solid var(--border)}
+
+/* menu drawer */
+.menu{position:absolute;top:0;left:0;bottom:0;width:86%;max-width:340px;background:var(--bg);border-right:1.5px solid var(--border);
+      transform:translateX(-101%);transition:transform .22s ease;z-index:30;overflow:auto;box-shadow:2px 0 18px rgba(0,0,0,.18)}
+.app.menu-open .menu{transform:none}
+.backdrop{position:absolute;inset:0;background:rgba(0,0,0,.35);opacity:0;visibility:hidden;transition:opacity .22s;z-index:25}
+.app.menu-open .backdrop{opacity:1;visibility:visible}
+.menu h3{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--text2);margin:12px 12px 6px}
+.mrow{margin:0 12px 8px}
+.mrow label{display:block;font-size:11px;color:var(--text2);margin-bottom:3px}
+.mrow input,.mrow select{width:100%;border:1.5px solid var(--border);border-radius:8px;padding:7px 8px;font-size:13px;font-family:inherit;background:var(--bg);color:var(--text)}
+.mhead{display:flex;align-items:center;justify-content:space-between;padding:12px 12px 6px;border-bottom:1.5px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:1}
+.mhead b{font-size:14px}
+.mx{border:1.5px solid var(--border);border-radius:8px;background:var(--bg);font-size:14px;padding:4px 9px;cursor:pointer}
+#abcTa{width:calc(100% - 24px);margin:0 12px 8px;height:120px;border:1.5px solid var(--border);border-radius:8px;padding:8px;font-family:ui-monospace,monospace;font-size:12px;resize:vertical;background:#fcfbf7}
+.mact{display:flex;gap:6px;flex-wrap:wrap;margin:0 12px 14px}
+.mact button{border:1.5px solid var(--border);border-radius:8px;background:var(--bg);font-size:12px;font-weight:600;padding:6px 10px;cursor:pointer}
+
+/* length popover */
+.pop{position:absolute;background:var(--bg);border:1.5px solid var(--ink);border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.2);padding:6px;z-index:40;display:none;flex-direction:column;gap:4px}
+.pop.open{display:flex}
+.pop button{border:1.5px solid var(--border);border-radius:7px;background:var(--bg);font-size:13px;padding:7px 14px;cursor:pointer;font-weight:600}
+.pop button.sel{background:var(--yellow);border-color:#caa52a}
+
+/* desktop */
+@media(min-width:780px){
+  .body{grid-template-columns:320px 1fr 150px}
+  .menu{position:static;transform:none;box-shadow:none;width:auto;max-width:none}
+  .app.menu-open .menu,.menu{transform:none}
+  .backdrop{display:none}
+  .menu-toggle-wrap{display:none}
+  .mhead{display:none}
+}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/abcjs@6.4.3/dist/abcjs-basic-min.js"></script>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="topbar">
+    <span class="menu-toggle-wrap"><button class="tb-btn" id="menuBtn">☰ Menü</button></span>
+    <span class="tb-title">ABC-Editor <span style="color:var(--text2);font-weight:400">Beta</span></span>
+    <span class="spacer"></span>
+    <button class="tb-btn" id="playBtn">▶︎</button>
+  </div>
+  <div class="body">
+    <!-- MENU (left on desktop, drawer on mobile) -->
+    <div class="menu" id="menu">
+      <div class="mhead"><b>Einstellungen</b><button class="mx" id="menuClose">✕</button></div>
+      <h3>Lied</h3>
+      <div class="mrow"><label>Titel</label><input id="fTitle" value="Neues Lied"></div>
+      <div class="mrow"><label>Komponist</label><input id="fComposer" placeholder="optional"></div>
+      <div class="mrow"><label>Taktart</label>
+        <select id="fMeter"><option>4/4</option><option>3/4</option><option>2/4</option><option>6/8</option><option>C</option></select></div>
+      <div class="mrow"><label>Tempo (BPM)</label><input id="fTempo" type="number" value="100" min="20" max="240"></div>
+      <h3>Darstellung <span style="text-transform:none;font-weight:400">(ändert Noten nicht)</span></h3>
+      <div class="mrow"><label>Notenschlüssel</label>
+        <select id="fClef"><option value="treble">Violin</option><option value="bass">Bass</option><option value="alto">Alt</option></select></div>
+      <h3>ABC-Code</h3>
+      <textarea id="abcTa" spellcheck="false"></textarea>
+      <div class="mact">
+        <button id="btnCopy">Kopieren</button>
+        <button id="btnAbc">⬇ ABC</button>
+      </div>
+    </div>
+    <div class="backdrop" id="backdrop"></div>
+
+    <!-- RESULT -->
+    <div class="result" id="resultWrap">
+      <span id="hint">Tippe rechts eine Note · Grundton unten (orange)</span>
+      <div id="paper"></div>
+    </div>
+
+    <!-- KEYBOARD -->
+    <div class="kbd">
+      <div class="kfnrow">
+        <button class="kfn" id="symBtn">Zeichen ▾</button>
+        <button class="kfn y" id="lenBtn">♩ ▾</button>
+      </div>
+      <div class="keys-scroll" id="keysScroll">
+        <div class="keys" id="keys"></div>
+      </div>
+      <div class="kactrow">
+        <button class="kfn" id="pauseBtn">Pause</button>
+        <button class="kfn" id="barBtn">Takt |</button>
+        <button class="kfn" id="delBtn">⌫ Löschen</button>
+        <button class="kfn y" id="keyBtn">C-Dur ▾</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- length popover -->
+<div class="pop" id="lenPop">
+  <button data-len="4">𝅝 Ganze</button>
+  <button data-len="2">𝅗𝅥 Halbe</button>
+  <button data-len="1" class="sel">♩ Viertel</button>
+  <button data-len="/">♪ Achtel</button>
+  <button data-len="//">𝅘𝅥𝅯 Sechzehntel</button>
+</div>
+<!-- key popover -->
+<div class="pop" id="keyPop"></div>
+<!-- symbol popover -->
+<div class="pop" id="symPop">
+  <button data-sym="newline">⏎ Neue Zeile</button>
+  <button data-sym="repstart">|: Wdh. auf</button>
+  <button data-sym="repend">:| Wdh. zu</button>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+
+/* ================= music theory ================= */
+const NAT={C:0,D:2,E:4,F:5,G:7,A:9,B:11};
+const LETTERS=['C','D','E','F','G','A','B'];
+const SOLF={C:'Do',D:'Re',E:'Mi',F:'Fa',G:'Sol',A:'La',B:'Si'};
+const MAJ=[0,2,4,5,7,9,11], MIN=[0,2,3,5,7,8,10];
+const WHITE_PC=[0,2,4,5,7,9,11];
+
+function keyMap(key){
+  const intervals=key.mode==='min'?MIN:MAJ;
+  const rootPc=((NAT[key.letter]+key.acc)%12+12)%12;
+  const rootIdx=LETTERS.indexOf(key.letter);
+  const scale={}, sig={};
+  for(let i=0;i<7;i++){
+    const pc=(rootPc+intervals[i])%12;
+    const letter=LETTERS[(rootIdx+i)%7];
+    let acc=pc-NAT[letter]; if(acc>6)acc-=12; if(acc<-6)acc+=12;
+    scale[pc]={letter,acc,isRoot:pc===rootPc}; sig[letter]=acc;
+  }
+  const useFlat=Object.values(sig).some(a=>a<0);
+  const map={};
+  for(let pc=0;pc<12;pc++){
+    if(scale[pc]){ const s=scale[pc]; map[pc]={letter:s.letter,acc:s.acc,inScale:true,isRoot:s.isRoot}; }
+    else{
+      let best=null;
+      for(const L of LETTERS){ if(NAT[L]===pc && sig[L]!==undefined && sig[L]!==0){best={letter:L,acc:0};break;} }
+      if(!best){
+        if(useFlat){ for(const L of LETTERS){ if(((NAT[L]+(sig[L]||0))%12+12)%12===(pc+1)%12){best={letter:L,acc:(sig[L]||0)-1};break;} } }
+        else{ for(const L of LETTERS){ if(((NAT[L]+(sig[L]||0))%12+12)%12===(pc+11)%12){best={letter:L,acc:(sig[L]||0)+1};break;} } }
+      }
+      if(!best)best={letter:'C',acc:0};
+      map[pc]={letter:best.letter,acc:best.acc,inScale:false,isRoot:false};
+    }
+  }
+  return {map,sig,rootPc};
+}
+function accSym(a){return a===0?'':a===1?'♯':a===-1?'♭':a===2?'𝄪':a===-2?'𝄫':'';}
+function label(letter,acc){return letter+accSym(acc);}
+function solf(letter,acc){return SOLF[letter]+accSym(acc);}
+function abcToken(letter,acc,sig,midi){
+  const sa=sig[letter]!==undefined?sig[letter]:0;
+  let acch=''; if(acc!==sa){ acch=acc===0?'=':acc===1?'^':acc===-1?'_':acc===2?'^^':acc===-2?'__':''; }
+  const o=Math.floor(midi/12)-1;
+  let L=(o>=5)?letter.toLowerCase():letter.toUpperCase();
+  let oct= o>5?"'".repeat(o-5) : o<4?",".repeat(4-o) : '';
+  return acch+L+oct;
+}
+
+/* key list for the key chooser */
+const KEYS=[
+  ['C-Dur',{letter:'C',acc:0,mode:'maj'}],['G-Dur',{letter:'G',acc:0,mode:'maj'}],['D-Dur',{letter:'D',acc:0,mode:'maj'}],
+  ['A-Dur',{letter:'A',acc:0,mode:'maj'}],['E-Dur',{letter:'E',acc:0,mode:'maj'}],['F-Dur',{letter:'F',acc:0,mode:'maj'}],
+  ['B-Dur',{letter:'B',acc:-1,mode:'maj'}],['Es-Dur',{letter:'E',acc:-1,mode:'maj'}],['As-Dur',{letter:'A',acc:-1,mode:'maj'}],
+  ['a-Moll',{letter:'A',acc:0,mode:'min'}],['e-Moll',{letter:'E',acc:0,mode:'min'}],['d-Moll',{letter:'D',acc:0,mode:'min'}],
+  ['g-Moll',{letter:'G',acc:0,mode:'min'}],['c-Moll',{letter:'C',acc:0,mode:'min'}],['h-Moll',{letter:'B',acc:0,mode:'min'}],
+  ['fis-Moll',{letter:'F',acc:1,mode:'min'}],['b-Moll',{letter:'B',acc:-1,mode:'min'}],['es-Moll',{letter:'E',acc:-1,mode:'min'}],
+];
+function keyAbc(key){ // K: field
+  const L=key.letter + (key.acc===1?'#':key.acc===-1?'b':'');
+  return L + (key.mode==='min'?'m':'');
+}
+
+/* ================= state ================= */
+const state={
+  key:{letter:'C',acc:0,mode:'maj'},
+  len:'1',            // '4','2','1','/','//'
+  body:'',            // ABC note body
+  midLo:48, midHi:84, // keyboard range C3..C6
+};
+let KM=keyMap(state.key);
+let visualObj=null, synth=null;
+
+/* ================= keyboard rendering ================= */
+function buildKeyboard(){
+  const keys=$('keys'); keys.innerHTML='';
+  const WH=38, GAP=4, PITCH=WH+GAP;          // white key pitch
+  // whites from high (top) to low (bottom)
+  const whites=[]; for(let m=state.midHi;m>=state.midLo;m--){ if(WHITE_PC.includes(((m%12)+12)%12)) whites.push(m); }
+  keys.style.height=(whites.length*PITCH+20)+'px';
+  whites.forEach((m,idx)=>{
+    const pc=((m%12)+12)%12, info=KM.map[pc];
+    const el=document.createElement('div');
+    el.className='wk'+(info.isRoot?' root':info.inScale?' inkey':'');
+    el.style.top=(idx*PITCH)+'px'; el.style.position='absolute'; el.style.left='0'; el.style.right='0';
+    el.innerHTML=`${label(info.letter,info.acc)} <span class="sf">${solf(info.letter,info.acc)}</span>`;
+    el.onclick=()=>insertNote(m);
+    keys.appendChild(el);
+  });
+  // blacks: sit at the boundary just below each white that has a black below it
+  whites.forEach((m,idx)=>{
+    const below=m-1, pcB=((below%12)+12)%12;
+    if(!WHITE_PC.includes(pcB)){            // there is a black between this white and the next lower
+      const info=KM.map[pcB];
+      const el=document.createElement('div');
+      el.className='bk'+(info.isRoot?' root':info.inScale?' inkey':'');
+      el.style.top=(idx*PITCH+WH-12)+'px';
+      el.textContent=label(info.letter,info.acc);
+      el.title=solf(info.letter,info.acc);
+      el.onclick=(e)=>{e.stopPropagation();insertNote(below);};
+      keys.appendChild(el);
+    }
+  });
+}
+function scrollToRoot(){
+  // start with a root near the middle octave sitting at the bottom of the view
+  const sc=$('keysScroll');
+  requestAnimationFrame(()=>{
+    const roots=[...$('keys').querySelectorAll('.root')];
+    if(!roots.length){ sc.scrollTop=sc.scrollHeight; return; }
+    const mid=$('keys').offsetHeight/2;
+    let best=roots[0], bd=1e9;
+    roots.forEach(r=>{ const d=Math.abs(r.offsetTop-mid); if(d<bd){bd=d;best=r;} });
+    sc.scrollTop = Math.max(0, best.offsetTop + best.offsetHeight - sc.clientHeight + 8);
+  });
+}
+
+/* ================= editing ================= */
+function lenSuffix(){ return state.len==='1'?'':state.len; }
+function insertNote(midi){
+  const pc=((midi%12)+12)%12, info=KM.map[pc];
+  const tok=abcToken(info.letter,info.acc,KM.sig,midi)+lenSuffix();
+  state.body += (state.body && !state.body.endsWith(' ')?' ':'') + tok;
+  playMidi(midi); render(true);
+}
+function insertRaw(s){ state.body += (state.body?' ':'') + s; render(true); }
+function delLast(){
+  state.body=state.body.replace(/\s*\S+\s*$/,'');
+  render(true);
+}
+
+/* ================= render ================= */
+function fullAbc(){
+  let h='X:1\n';
+  if($('fTitle').value) h+='T:'+$('fTitle').value+'\n';
+  if($('fComposer').value) h+='C:'+$('fComposer').value+'\n';
+  h+='M:'+$('fMeter').value+'\n';
+  h+='L:1/4\n';
+  if($('fTempo').value) h+='Q:1/4='+$('fTempo').value+'\n';
+  h+='K:'+keyAbc(state.key)+' clef='+$('fClef').value+'\n';
+  h+=(state.body||'');
+  return h;
+}
+let rt=null;
+function render(fromButtons){
+  if(fromButtons){ $('abcTa').value=fullAbc(); }
+  clearTimeout(rt);
+  rt=setTimeout(()=>{
+    try{
+      const arr=ABCJS.renderAbc('paper', $('abcTa').value, {responsive:'resize', add_classes:true, staffwidth: Math.max(240,$('resultWrap').clientWidth-24)});
+      visualObj=arr&&arr[0];
+    }catch(e){ console.warn(e); }
+  }, 60);
+}
+
+/* ================= audio (click/play) ================= */
+function playMidi(midi){
+  if(!window.ABCJS||!ABCJS.synth||!ABCJS.synth.supportsAudio())return;
+  try{ ABCJS.synth.playEvent([{pitch:midi,volume:90,duration:.3,instrument:0,start:0,gap:0}],[],300).catch(()=>{}); }catch(e){}
+}
+
+/* ================= key chooser ================= */
+function buildKeyPop(){
+  const p=$('keyPop'); p.innerHTML='';
+  KEYS.forEach(([name,k])=>{
+    const b=document.createElement('button');
+    b.textContent=name;
+    if(k.letter===state.key.letter&&k.acc===state.key.acc&&k.mode===state.key.mode) b.classList.add('sel');
+    b.onclick=()=>{ state.key={...k}; KM=keyMap(state.key); $('keyBtn').textContent=name+' ▾';
+      buildKeyboard(); scrollToRoot(); render(true); closePops(); };
+    p.appendChild(b);
+  });
+}
+
+/* ================= popovers ================= */
+function openPop(pop, anchor){
+  closePops();
+  const r=anchor.getBoundingClientRect();
+  pop.classList.add('open');
+  const pr=pop.getBoundingClientRect();
+  let left=r.left - pr.width - 6; if(left<6) left=r.right+6;
+  if(left+pr.width>window.innerWidth-6) left=window.innerWidth-pr.width-6;
+  let top=r.top; if(top+pr.height>window.innerHeight-6) top=window.innerHeight-pr.height-6;
+  pop.style.left=left+'px'; pop.style.top=Math.max(6,top)+'px';
+}
+function closePops(){ document.querySelectorAll('.pop').forEach(p=>p.classList.remove('open')); }
+document.addEventListener('click',e=>{ if(!e.target.closest('.pop')&&!e.target.closest('.kfn')) closePops(); });
+
+/* ================= wiring ================= */
+$('menuBtn').onclick=()=>$('app').classList.toggle('menu-open');
+$('menuClose').onclick=()=>$('app').classList.remove('menu-open');
+$('backdrop').onclick=()=>$('app').classList.remove('menu-open');
+
+$('lenBtn').onclick=()=>openPop($('lenPop'),$('lenBtn'));
+$('lenPop').querySelectorAll('button').forEach(b=>b.onclick=()=>{
+  state.len=b.dataset.len;
+  $('lenPop').querySelectorAll('button').forEach(x=>x.classList.toggle('sel',x===b));
+  const sym={'4':'𝅝','2':'𝅗𝅥','1':'♩','/':'♪','//':'𝅘𝅥𝅯'}[state.len]||'♩';
+  $('lenBtn').textContent=sym+' ▾'; closePops();
+});
+$('keyBtn').onclick=()=>{ buildKeyPop(); openPop($('keyPop'),$('keyBtn')); };
+$('symBtn').onclick=()=>openPop($('symPop'),$('symBtn'));
+$('symPop').querySelectorAll('button').forEach(b=>b.onclick=()=>{
+  const s=b.dataset.sym;
+  if(s==='newline') state.body+=' $'; // placeholder; abcjs uses newline char
+  if(s==='newline'){ state.body=state.body.replace(/ \$$/,''); state.body+='\n'; }
+  if(s==='repstart') insertRaw('|:');
+  if(s==='repend') insertRaw(':|');
+  render(true); closePops();
+});
+$('pauseBtn').onclick=()=>insertRaw('z'+lenSuffix());
+$('barBtn').onclick=()=>insertRaw('|');
+$('delBtn').onclick=delLast;
+
+['fTitle','fComposer','fMeter','fTempo','fClef'].forEach(id=>$(id).addEventListener('input',()=>render(true)));
+$('abcTa').addEventListener('input',()=>{ render(false); });
+$('btnCopy').onclick=()=>{ navigator.clipboard&&navigator.clipboard.writeText($('abcTa').value); };
+$('btnAbc').onclick=()=>{ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([$('abcTa').value],{type:'text/plain'}));a.download=($('fTitle').value||'lied')+'.abc';a.click(); };
+
+$('playBtn').onclick=async()=>{
+  if(!visualObj||!ABCJS.synth.supportsAudio())return;
+  try{ const s=new ABCJS.synth.CreateSynth();
+    await s.init({visualObj,options:{soundFontUrl:'https://paulrosen.github.io/midi-js-soundfonts/abcjs/',soundFontVolumeMultiplier:0.4}});
+    await s.prime(); s.start();
+  }catch(e){ console.warn(e); }
+};
+
+window.addEventListener('resize',()=>render(false));
+
+/* init */
+$('keyBtn').textContent='C-Dur ▾';
+buildKeyboard(); scrollToRoot(); render(true);
+</script>
+</body></html>
