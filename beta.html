@@ -131,6 +131,9 @@ button{font-family:inherit}
       <div class="mact">
         <button id="btnCopy">Kopieren</button>
         <button id="btnAbc">⬇ ABC</button>
+        <button id="btnPrint">🖨 PDF-Vorschau</button>
+        <button id="btnMidi" style="display:none">⬇ MIDI</button>
+        <button id="btnMp3" style="display:none">⬇ MP3</button>
       </div>
     </div>
     <div class="backdrop" id="backdrop"></div>
@@ -654,6 +657,79 @@ $('playBtn').onclick=async()=>{
     await s.prime(); s.start();
   }catch(e){ console.warn(e); }
 };
+
+/* ================= export + print ================= */
+const NATIVE=(typeof AndroidExport!=='undefined');
+function buildPrintHtml(withAutoPrint){
+  const title=$('fTitle').value||'Noten';
+  const tmp=document.createElement('div');
+  tmp.style.cssText='position:absolute;left:-10000px;top:0;width:720px';
+  document.body.appendChild(tmp);
+  let printBody='';
+  try{
+    ABCJS.renderAbc(tmp,$('abcTa').value,{staffwidth:680,
+      wrap:{minSpacing:1.8,maxSpacing:2.8,preferredMeasuresPerLine:4},
+      oneSvgPerLine:true,scale:1,add_classes:true});
+    printBody=tmp.innerHTML;
+  }catch(e){ printBody=''; }
+  document.body.removeChild(tmp);
+  if(!printBody){ const svg=$('paper').querySelector('svg'); printBody=svg?svg.outerHTML:''; }
+  const autoPrint=withAutoPrint?'<scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},250);};</scr'+'ipt>':'';
+  return '<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+title+'</title>'+
+    '<style>html,body{margin:0;background:#fff}'+
+    'svg{width:100%;max-width:100%;height:auto;display:block;margin:0 0 6px;break-inside:avoid;page-break-inside:avoid}'+
+    'svg path,svg text,svg tspan,svg ellipse,svg rect{fill:#000!important;stroke:#000!important}'+
+    'svg .abcjs-staff path{stroke-width:1px}'+
+    '@media print{@page{size:A4 portrait;margin:1.5cm}}</style></head><body>'+
+    printBody+autoPrint+'</body></html>';
+}
+$('btnPrint').onclick=()=>{
+  if(!visualObj){ alert('Noch keine Noten.'); return; }
+  if(NATIVE){ try{ AndroidExport.printScore(buildPrintHtml(false),($('fTitle').value||'Noten')); }catch(e){ alert(e.message); } return; }
+  const w=window.open('','_blank','width=800,height=600');
+  if(!w){ alert('Bitte Pop-ups erlauben.'); return; }
+  w.document.write(buildPrintHtml(true)); w.document.close();
+};
+$('btnMidi').onclick=()=>{
+  if(!visualObj)return;
+  try{ const d=ABCJS.synth.getMidiFile($('abcTa').value,{midiOutputType:'encoded'});
+    if(!d){ alert('MIDI nicht verfügbar'); return; }
+    const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([d],{type:'audio/midi'}));
+    a.download=($('fTitle').value||'lied').replace(/\s+/g,'_')+'.midi'; a.click();
+  }catch(e){ alert(e.message); }
+};
+function f32ToI16(f){ const o=new Int16Array(f.length); for(let i=0;i<f.length;i++){let s=f[i];s=s<-1?-1:s>1?1:s;o[i]=s<0?s*0x8000:s*0x7FFF;} return o; }
+function audioBuffersToMp3(abs){
+  let len=0,sr=44100,ch=1;
+  abs.forEach(ab=>{ if(ab.length>len)len=ab.length; sr=ab.sampleRate; if(ab.numberOfChannels>ch)ch=ab.numberOfChannels; });
+  ch=Math.min(ch,2);
+  const mix=[]; for(let c=0;c<ch;c++) mix.push(new Float32Array(len));
+  abs.forEach(ab=>{ for(let c=0;c<ch;c++){ const src=ab.getChannelData(Math.min(c,ab.numberOfChannels-1)),dst=mix[c]; for(let i=0;i<src.length;i++) dst[i]+=src[i]; } });
+  const enc=new lamejs.Mp3Encoder(ch,sr,128);
+  const L=f32ToI16(mix[0]),R=ch>1?f32ToI16(mix[1]):null,block=1152,out=[];
+  for(let i=0;i<len;i+=block){ const mp3=R?enc.encodeBuffer(L.subarray(i,i+block),R.subarray(i,i+block)):enc.encodeBuffer(L.subarray(i,i+block)); if(mp3.length)out.push(mp3); }
+  const end=enc.flush(); if(end.length)out.push(end);
+  let total=0; out.forEach(a=>total+=a.length);
+  const res=new Uint8Array(total); let off=0; out.forEach(a=>{res.set(a,off);off+=a.length;});
+  return res;
+}
+$('btnMp3').onclick=async()=>{
+  if(!visualObj)return;
+  if(typeof lamejs==='undefined'){ alert('MP3-Encoder nicht geladen'); return; }
+  try{
+    const buf=new ABCJS.synth.CreateSynth();
+    await buf.init({visualObj,options:{soundFontUrl:SOUNDFONT_URL,soundFontVolumeMultiplier:SOUNDFONT_VOL}});
+    await buf.prime();
+    const abs=buf.audioBuffers;
+    if(!abs||!abs.length||!abs[0].getChannelData) throw new Error('kein Audiopuffer');
+    const mp3=audioBuffersToMp3(abs);
+    let bin=''; const CH=0x8000;
+    for(let i=0;i<mp3.length;i+=CH) bin+=String.fromCharCode.apply(null,mp3.subarray(i,i+CH));
+    AndroidExport.save('data:audio/mpeg;base64,'+btoa(bin),'audio/mpeg');
+  }catch(e){ alert('MP3: '+e.message); }
+};
+// Web: only PDF preview + ABC. App: also MIDI + MP3 + native print.
+if(NATIVE){ $('btnMidi').style.display=''; $('btnMp3').style.display=''; $('btnPrint').textContent='🖨 Noten drucken'; }
 
 $('micBtn').onclick=()=>{ if(micState) stopMic(); else startMic(); };
 $('mmStop').onclick=stopMic;
