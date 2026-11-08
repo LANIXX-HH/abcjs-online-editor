@@ -14,7 +14,11 @@ body{font-family:"Segoe UI",system-ui,sans-serif;color:var(--text);background:va
 button{font-family:inherit}
 
 /* ---- layout ---- */
-.app{height:100dvh;display:grid;grid-template-rows:auto 1fr}
+.app{height:100dvh;display:grid;grid-template-rows:auto auto 1fr}
+.voicebar{display:flex;gap:6px;padding:6px 10px;background:var(--bg2);border-bottom:1.5px solid var(--border);overflow-x:auto}
+.voicebar[hidden]{display:none}
+.vtab{flex:0 0 auto;border:1.5px solid var(--border);border-radius:9px;background:var(--bg);font-size:12px;font-weight:700;padding:5px 12px;cursor:pointer;border-left:5px solid var(--vc,#999)}
+.vtab.active{background:var(--vc,#999);color:#fff;border-color:var(--vc,#999)}
 .topbar{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg);border-bottom:1.5px solid var(--border)}
 .tb-btn{border:1.5px solid var(--border);border-radius:9px;background:var(--bg);color:var(--text);font-size:13px;font-weight:600;padding:6px 11px;cursor:pointer}
 .tb-btn.on{background:var(--yellow);border-color:#caa52a}
@@ -25,6 +29,7 @@ button{font-family:inherit}
 #paper{min-height:100%}
 #paper .sel-note,#paper .sel-note *{fill:var(--accent,#e3863a)!important;stroke:var(--accent,#e3863a)!important}
 #paper .abcjs-note{cursor:pointer}
+#paper .abcjs-v0{fill:#2d6cdf}#paper .abcjs-v1{fill:#d9534f}#paper .abcjs-v2{fill:#1d9a6c}#paper .abcjs-v3{fill:#b5651d}
 #hint{position:absolute;top:8px;left:10px;font-size:11px;color:var(--text2)}
 
 /* keyboard column */
@@ -83,9 +88,11 @@ button{font-family:inherit}
   <div class="topbar">
     <span class="menu-toggle-wrap"><button class="tb-btn" id="menuBtn">☰ Menü</button></span>
     <span class="tb-title">ABC-Editor <span style="color:var(--text2);font-weight:400">Beta</span></span>
+    <button class="tb-btn" id="micBtn" title="Singen → Noten">🎤</button>
     <span class="spacer"></span>
     <button class="tb-btn" id="playBtn">▶︎</button>
   </div>
+  <div class="voicebar" id="voicebar" hidden></div>
   <div class="body">
     <!-- MENU (left on desktop, drawer on mobile) -->
     <div class="menu" id="menu">
@@ -96,8 +103,14 @@ button{font-family:inherit}
       <div class="mrow"><label>Taktart</label>
         <select id="fMeter"><option>4/4</option><option>3/4</option><option>2/4</option><option>6/8</option><option>C</option></select></div>
       <div class="mrow"><label>Tempo (BPM)</label><input id="fTempo" type="number" value="100" min="20" max="240"></div>
+      <h3>Stimmen</h3>
+      <div class="mrow"><label>Modus</label>
+        <select id="fVoiceMode"><option value="single">Einstimmig</option><option value="multi">Mehrstimmig (SATB)</option></select></div>
+      <div class="mrow" id="voiceCountRow" hidden><label>Anzahl Stimmen</label>
+        <select id="fVoiceCount"><option value="2">2 (S/A)</option><option value="3">3 (S/A/T)</option><option value="4">4 (S/A/T/B)</option></select></div>
+      <div id="voiceEditors"></div>
       <h3>Darstellung <span style="text-transform:none;font-weight:400">(ändert Noten nicht)</span></h3>
-      <div class="mrow"><label>Notenschlüssel</label>
+      <div class="mrow" id="clefRow"><label>Notenschlüssel</label>
         <select id="fClef"><option value="treble">Violin</option><option value="bass">Bass</option><option value="alto">Alt</option></select></div>
       <h3>ABC-Code</h3>
       <textarea id="abcTa" spellcheck="false"></textarea>
@@ -214,15 +227,27 @@ function keyAbc(key){ // K: field
   return L + (key.mode==='min'?'m':'');
 }
 
+/* ================= voices ================= */
+const VOICE_DEFS=[
+  {id:'S',name:'Sopran',clef:'treble',lo:60,hi:84},
+  {id:'A',name:'Alt',   clef:'treble',lo:55,hi:79},
+  {id:'T',name:'Tenor', clef:'treble',lo:48,hi:72},
+  {id:'B',name:'Bass',  clef:'bass',  lo:40,hi:64},
+];
+const VOICE_COLORS=['#2d6cdf','#d9534f','#1d9a6c','#b5651d'];
+function newVoice(def){ return {name:def.name,clef:def.clef,lo:def.lo,hi:def.hi,tokens:[],cursor:0,sel:-1}; }
+
 /* ================= state ================= */
 const state={
   key:{letter:'C',acc:0,mode:'maj'},
-  len:'1',            // '4','2','1','/','//'
-  tokens:[],          // [{t:'C', kind:'note', midi:60} | {t:'|',kind:'bar'} | ...]
-  cursor:0,           // insert position (before this index)
-  sel:-1,             // selected note index (for drag)
-  midLo:48, midHi:84, // keyboard range C3..C6
+  len:'1',               // '4','2','1','/','//'
+  voiceMode:'single',    // 'single' | 'multi'
+  voiceCount:2,          // voices used in multi mode (2..4)
+  activeVoice:0,         // 0-based index into voices
+  voices:[newVoice(VOICE_DEFS[0]),newVoice(VOICE_DEFS[1]),newVoice(VOICE_DEFS[2]),newVoice(VOICE_DEFS[3])],
 };
+function AV(){ return state.voices[state.activeVoice]; }
+function nActive(){ return state.voiceMode==='single'?1:state.voiceCount; }
 let KM=keyMap(state.key);
 let visualObj=null, synth=null;
 
@@ -230,8 +255,9 @@ let visualObj=null, synth=null;
 function buildKeyboard(){
   const keys=$('keys'); keys.innerHTML='';
   const WH=38, GAP=4, PITCH=WH+GAP;          // white key pitch
+  const lo=AV().lo, hi=AV().hi;
   // whites from high (top) to low (bottom)
-  const whites=[]; for(let m=state.midHi;m>=state.midLo;m--){ if(WHITE_PC.includes(((m%12)+12)%12)) whites.push(m); }
+  const whites=[]; for(let m=hi;m>=lo;m--){ if(WHITE_PC.includes(((m%12)+12)%12)) whites.push(m); }
   keys.style.height=(whites.length*PITCH+20)+'px';
   whites.forEach((m,idx)=>{
     const pc=((m%12)+12)%12, info=KM.map[pc];
@@ -277,25 +303,28 @@ function tokenFor(midi){
   return abcToken(info.letter,info.acc,KM.sig,midi)+lenSuffix();
 }
 function insertNote(midi){
-  state.tokens.splice(state.cursor,0,{t:tokenFor(midi),kind:'note',midi});
-  state.cursor++; state.sel=state.cursor-1;
+  const v=AV();
+  v.tokens.splice(v.cursor,0,{t:tokenFor(midi),kind:'note',midi});
+  v.cursor++; v.sel=v.cursor-1;
   playMidi(midi); render(true);
 }
 function insertRaw(s,kind){
-  state.tokens.splice(state.cursor,0,{t:s,kind:kind||'sym'});
-  state.cursor++; state.sel=-1; render(true);
+  const v=AV();
+  v.tokens.splice(v.cursor,0,{t:s,kind:kind||'sym'});
+  v.cursor++; v.sel=-1; render(true);
 }
 function delAtCursor(){
-  if(state.cursor>0){ state.tokens.splice(state.cursor-1,1); state.cursor--; }
-  state.sel=-1; render(true);
+  const v=AV();
+  if(v.cursor>0){ v.tokens.splice(v.cursor-1,1); v.cursor--; }
+  v.sel=-1; render(true);
 }
 // move a note's pitch by diatonic steps within the current scale
 function scalePitches(){
-  const arr=[]; for(let m=state.midLo-12;m<=state.midHi+12;m++){ const pc=((m%12)+12)%12; if(KM.map[pc].inScale) arr.push(m); }
+  const arr=[]; for(let m=24;m<=96;m++){ const pc=((m%12)+12)%12; if(KM.map[pc].inScale) arr.push(m); }
   return arr;
 }
-function changePitch(idx, step){
-  const tk=state.tokens[idx]; if(!tk||tk.kind!=='note')return;
+function changePitch(vIdx, idx, step){
+  const tk=state.voices[vIdx].tokens[idx]; if(!tk||tk.kind!=='note')return;
   const suf=(tk.t.match(/[0-9\/]+$/)||[''])[0];     // keep length suffix
   const sp=scalePitches();
   let ni=0, bd=1e9; sp.forEach((m,i)=>{const d=Math.abs(m-tk.midi); if(d<bd){bd=d;ni=i;}});
@@ -306,15 +335,17 @@ function changePitch(idx, step){
 }
 
 /* ================= render ================= */
-let lastRanges=[], headerLen=0;
-function buildBody(){
+// lastMap: absolute char ranges across the whole ABC string -> {v,i,kind}
+let lastMap=[];
+function buildVoiceBody(v){
   let str=''; const ranges=[];
-  state.tokens.forEach((tk,i)=>{
+  v.tokens.forEach((tk,i)=>{
     if(i>0) str+=(tk.kind==='newline'?'':' ');
     const start=str.length;
     str+=(tk.kind==='newline'?'\n':tk.t);
     ranges.push({i,start,end:str.length,kind:tk.kind});
   });
+  if(!str) str='x8|';   // placeholder bar so empty voice still renders a staff
   return {str,ranges};
 }
 function fullAbc(){
@@ -324,10 +355,30 @@ function fullAbc(){
   h+='M:'+$('fMeter').value+'\n';
   h+='L:1/4\n';
   if($('fTempo').value) h+='Q:1/4='+$('fTempo').value+'\n';
-  h+='K:'+keyAbc(state.key)+' clef='+$('fClef').value+'\n';
-  headerLen=h.length;
-  const bb=buildBody(); lastRanges=bb.ranges;
-  return h+bb.str;
+  lastMap=[];
+  const n=nActive();
+  let out;
+  if(n===1){
+    const v=state.voices[0];
+    h+='K:'+keyAbc(state.key)+' clef='+v.clef+'\n';
+    const bb=buildVoiceBody(v);
+    bb.ranges.forEach(r=>lastMap.push({v:0,i:r.i,start:h.length+r.start,end:h.length+r.end,kind:r.kind}));
+    out=h+bb.str;
+  } else {
+    // %%score line groups voices on braces
+    const ids=VOICE_DEFS.slice(0,n).map(d=>d.id);
+    h+='%%score ('+ids.join(' ')+')\n';
+    h+='K:'+keyAbc(state.key)+'\n';
+    out=h;
+    for(let vi=0; vi<n; vi++){
+      const v=state.voices[vi], def=VOICE_DEFS[vi];
+      out+='V:'+def.id+' clef='+v.clef+' name="'+(v.name||def.name).replace(/"/g,'')+'"\n';
+      const bb=buildVoiceBody(v);
+      bb.ranges.forEach(r=>lastMap.push({v:vi,i:r.i,start:out.length+r.start,end:out.length+r.end,kind:r.kind}));
+      out+=bb.str+'\n';
+    }
+  }
+  return out;
 }
 let rt=null;
 function render(fromButtons){
@@ -345,31 +396,90 @@ function render(fromButtons){
     }catch(e){ console.warn(e); }
   }, 60);
 }
-function tokenAtChar(startChar){
-  const bc=startChar-headerLen;
-  for(const r of lastRanges){ if(bc>=r.start && bc<r.end) return r.i; }
-  return -1;
+function locAtChar(startChar){
+  for(const r of lastMap){ if(startChar>=r.start && startChar<r.end) return r; }
+  return null;
 }
 function onNoteClick(abcElem, tn, classes, analysis, drag, ev){
   if(abcElem.startChar==null) return;
-  const idx=tokenAtChar(abcElem.startChar);
-  if(idx<0) return;
-  const tk=state.tokens[idx];
-  if(drag && drag.step && state.sel>=0 && state.tokens[state.sel] && state.tokens[state.sel].kind==='note'){
-    changePitch(state.sel, drag.step); return;
+  const loc=locAtChar(abcElem.startChar);
+  if(!loc) return;
+  const vo=state.voices[loc.v], tk=vo.tokens[loc.i];
+  if(drag && drag.step && vo.sel>=0 && vo.tokens[vo.sel] && vo.tokens[vo.sel].kind==='note'){
+    changePitch(loc.v, vo.sel, drag.step); return;
   }
-  if(tk.kind==='note'){ state.sel=idx; state.cursor=idx+1; playMidi(tk.midi); paintSelection(); }
+  if(loc.v!==state.activeVoice && state.voiceMode==='multi'){ setActiveVoice(loc.v); }
+  if(tk && tk.kind==='note'){ vo.sel=loc.i; vo.cursor=loc.i+1; playMidi(tk.midi); paintSelection(); }
 }
 function paintSelection(){
   const paper=$('paper');
   paper.querySelectorAll('.sel-note').forEach(e=>e.classList.remove('sel-note'));
-  if(state.sel<0||!state.tokens[state.sel]) return;
-  const r=lastRanges.find(x=>x.i===state.sel); if(!r) return;
-  // abcjs tags notes with class "abcjs-note" and data; match by char via abcjs internal is hard,
-  // so highlight by index position among note elements
-  const noteTokIdx=state.tokens.map((t,i)=>({t,i})).filter(o=>o.t.kind==='note').findIndex(o=>o.i===state.sel);
+  const v=AV();
+  if(v.sel<0||!v.tokens[v.sel]||v.tokens[v.sel].kind!=='note') return;
+  // index of selected note among all note elements, in document order across voices
+  let count=0, target=-1;
+  for(let vi=0; vi<nActive(); vi++){
+    const vo=state.voices[vi];
+    vo.tokens.forEach((t,i)=>{ if(t.kind==='note'){ if(vi===state.activeVoice && i===v.sel) target=count; count++; } });
+  }
   const noteEls=paper.querySelectorAll('.abcjs-note');
-  if(noteEls[noteTokIdx]) noteEls[noteTokIdx].classList.add('sel-note');
+  if(target>=0 && noteEls[target]) noteEls[target].classList.add('sel-note');
+}
+
+/* ================= voices UI ================= */
+function setActiveVoice(vi){
+  state.activeVoice=vi;
+  [...$('voicebar').children].forEach((b,i)=>b.classList.toggle('active',i===vi));
+  buildKeyboard(); scrollToRoot();
+  $('keyBtn').textContent=keyLabel()+' ▾';
+  paintSelection();
+}
+function buildVoicebar(){
+  const vb=$('voicebar');
+  if(state.voiceMode==='single'){ vb.hidden=true; vb.innerHTML=''; return; }
+  vb.hidden=false; vb.innerHTML='';
+  for(let vi=0; vi<state.voiceCount; vi++){
+    const b=document.createElement('button');
+    b.className='vtab'+(vi===state.activeVoice?' active':'');
+    b.style.setProperty('--vc',VOICE_COLORS[vi]);
+    b.textContent=state.voices[vi].name||VOICE_DEFS[vi].name;
+    b.onclick=()=>setActiveVoice(vi);
+    vb.appendChild(b);
+  }
+}
+function buildVoiceEditors(){
+  const box=$('voiceEditors'); box.innerHTML='';
+  if(state.voiceMode==='single'){ return; }
+  for(let vi=0; vi<state.voiceCount; vi++){
+    const v=state.voices[vi], def=VOICE_DEFS[vi];
+    const wrap=document.createElement('div'); wrap.className='mrow';
+    wrap.innerHTML='<label style="color:'+VOICE_COLORS[vi]+';font-weight:700">Stimme '+(vi+1)+'</label>'+
+      '<input data-vn="'+vi+'" value="'+(v.name||def.name)+'" style="margin-bottom:5px">'+
+      '<select data-vc="'+vi+'">'+
+        '<option value="treble"'+(v.clef==='treble'?' selected':'')+'>Violin</option>'+
+        '<option value="bass"'+(v.clef==='bass'?' selected':'')+'>Bass</option>'+
+        '<option value="alto"'+(v.clef==='alto'?' selected':'')+'>Alt</option>'+
+      '</select>';
+    box.appendChild(wrap);
+  }
+  box.querySelectorAll('[data-vn]').forEach(inp=>inp.oninput=()=>{
+    state.voices[+inp.dataset.vn].name=inp.value; buildVoicebar(); render(true);
+  });
+  box.querySelectorAll('[data-vc]').forEach(sel=>sel.onchange=()=>{
+    state.voices[+sel.dataset.vc].clef=sel.value; render(true);
+  });
+}
+function setVoiceMode(mode){
+  state.voiceMode=mode;
+  $('voiceCountRow').hidden=(mode!=='multi');
+  $('clefRow').hidden=(mode==='multi');
+  if(mode==='single'){ state.activeVoice=0; }
+  else if(state.activeVoice>=state.voiceCount){ state.activeVoice=0; }
+  buildVoicebar(); buildVoiceEditors(); setActiveVoice(state.activeVoice); render(true);
+}
+function keyLabel(){
+  const f=KEYS.find(([n,k])=>k.letter===state.key.letter&&k.acc===state.key.acc&&k.mode===state.key.mode);
+  return f?f[0]:'C-Dur';
 }
 
 /* ================= audio (click/play) ================= */
@@ -433,7 +543,14 @@ $('pauseBtn').onclick=()=>insertRaw('z'+lenSuffix(),'rest');
 $('barBtn').onclick=()=>insertRaw('|','bar');
 $('delBtn').onclick=delAtCursor;
 
-['fTitle','fComposer','fMeter','fTempo','fClef'].forEach(id=>$(id).addEventListener('input',()=>render(true)));
+['fTitle','fComposer','fMeter','fTempo'].forEach(id=>$(id).addEventListener('input',()=>render(true)));
+$('fClef').addEventListener('input',()=>{ state.voices[0].clef=$('fClef').value; render(true); });
+$('fVoiceMode').addEventListener('change',()=>setVoiceMode($('fVoiceMode').value));
+$('fVoiceCount').addEventListener('change',()=>{
+  state.voiceCount=parseInt($('fVoiceCount').value)||2;
+  if(state.activeVoice>=state.voiceCount) state.activeVoice=0;
+  buildVoicebar(); buildVoiceEditors(); setActiveVoice(state.activeVoice); render(true);
+});
 $('abcTa').addEventListener('input',()=>{ render(false); });
 $('btnCopy').onclick=()=>{ navigator.clipboard&&navigator.clipboard.writeText($('abcTa').value); };
 $('btnAbc').onclick=()=>{ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([$('abcTa').value],{type:'text/plain'}));a.download=($('fTitle').value||'lied')+'.abc';a.click(); };
