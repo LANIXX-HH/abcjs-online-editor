@@ -256,43 +256,26 @@ input[type=checkbox]{accent-color:var(--blue)}
 
 /* elements only used on mobile */
 .menu-btn{display:none}
-.drawer-head{display:none}
-.backdrop{display:none}
 
-/* ───────────── Mobile layout (app-style) ───────────── */
+/* ───────────── Mobile layout (one-pager, scrolls normally) ───────────── */
 @media (max-width:768px){
   body{margin:0}
-  .wrap{display:flex;flex-direction:column;height:100vh;height:100dvh;border:none;border-radius:0;box-shadow:none}
+  /* everything stacks and the whole page scrolls */
+  .wrap{display:flex;flex-direction:column;height:auto;min-height:100dvh;border:none;border-radius:0;box-shadow:none;overflow:visible}
 
-  /* order: voice bar on top, score fills middle, input toolbar docked at bottom */
-  .voice-bar{order:0;flex:0 0 auto;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;white-space:nowrap;-webkit-overflow-scrolling:touch;gap:6px;padding:7px 10px}
-  .voice-bar-label{display:none}
-  .main{order:1;flex:1 1 auto;min-height:0}
-  .toolbar{order:2;flex:0 0 auto;border-top:1px solid var(--border);border-bottom:none;max-height:44vh;overflow-y:auto;gap:9px 12px;padding:9px 10px 12px}
-  .theme-toggle{display:none}
+  /* order: voice bar, input toolbar, score+abc (main), settings sidebar last */
+  .voice-bar{order:0;flex-wrap:wrap;gap:6px;padding:7px 10px;position:sticky;top:0;z-index:40}
+  .toolbar{order:1}
+  .main{order:2;overflow:visible}
+  .sidebar{order:3;overflow:visible;border-right:none;border-top:1px solid var(--border)}
+  .score-panel{overflow:visible}
 
-  /* menu button */
-  .menu-btn{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;width:38px;height:34px;border:1px solid var(--border);border-radius:8px;background:var(--bg-primary);color:var(--text);font-size:18px;cursor:pointer;padding:0}
+  /* the two collapsible blocks: toolbar (top input menu) and sidebar (settings) */
+  .toolbar.m-collapsed,.sidebar.m-collapsed{display:none}
 
-  /* sidebar becomes a left drawer */
-  .sidebar{position:fixed;top:0;left:0;bottom:0;width:86%;max-width:340px;z-index:60;transform:translateX(-100%);transition:transform .25s ease;box-shadow:2px 0 18px rgba(0,0,0,.35);border-right:1px solid var(--border);padding-top:0}
-  body.drawer-open .sidebar{transform:none}
-  .drawer-head{display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--bg-secondary);padding:12px 4px 8px;margin-bottom:4px;border-bottom:1px solid var(--border);font-weight:700;font-size:14px;z-index:1}
-  .drawer-close{width:32px;height:32px;border:1px solid var(--border);border-radius:8px;background:var(--bg-primary);color:var(--text);font-size:15px;cursor:pointer}
-
-  .backdrop{display:block;position:fixed;inset:0;background:rgba(0,0,0,.45);opacity:0;visibility:hidden;transition:opacity .25s;z-index:55}
-  body.drawer-open .backdrop{opacity:1;visibility:visible}
-
-  /* hide the raw ABC text panel on phones (secondary); score + player stay */
-  .abc-panel,.divider{display:none}
-  /* bottom-bar is relocated into the drawer on phones (see JS) */
-  .sidebar .bottom-bar{display:flex;flex-wrap:wrap;gap:7px;padding:10px 0 4px;border-top:1px solid var(--border);margin-top:6px}
-
-  /* bigger tap targets in the input toolbar */
-  .toolbar .btn{min-height:40px;min-width:40px}
-  .toolbar .tl{font-size:9px}
-  .score-panel{padding:8px}
-  #scoreHint{font-size:10px}
+  /* toggle buttons live in the voice bar */
+  .menu-btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;height:32px;padding:0 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg-primary);color:var(--text);font-size:13px;font-weight:600;cursor:pointer}
+  .menu-btn.on{background:var(--blue);color:#fff;border-color:var(--blue)}
 }
 </style>
 </head>
@@ -301,7 +284,8 @@ input[type=checkbox]{accent-color:var(--blue)}
 
 <!-- ── Voice selector bar ── -->
 <div class="voice-bar">
-  <button class="menu-btn" id="menuBtn" aria-label="Menu">☰</button>
+  <button class="menu-btn" id="tbBtn" aria-label="Toolbar">⌨ <span data-i18n="m.input">Eingabe</span></button>
+  <button class="menu-btn" id="menuBtn" aria-label="Settings">☰ <span data-i18n="info.settings">Einstellungen</span></button>
   <span class="voice-bar-label" data-i18n="voice.label">Stimme</span>
   <div class="voice-switcher">
     <button class="vbtn active" data-v="1">
@@ -430,7 +414,6 @@ input[type=checkbox]{accent-color:var(--blue)}
 
 <!-- ── Sidebar ── -->
 <div class="sidebar" id="sidebar">
-  <div class="drawer-head"><span data-i18n="info.settings">Einstellungen</span><button class="drawer-close" id="drawerClose" aria-label="Close">✕</button></div>
   <div>
     <div class="stitle" data-i18n="info.title">Lied-Info</div>
     <div class="fl"><label class="flabel" data-i18n="f.title">Titel</label><input class="fi" id="fTitle" value="Mein Lied"></div>
@@ -644,8 +627,6 @@ input[type=checkbox]{accent-color:var(--blue)}
 </div>
 
 <!-- ── Main ── -->
-<div class="backdrop" id="backdrop"></div>
-
 <div class="main">
   <div class="score-panel" id="scorePanel">
     <div style="font-size:11px;color:var(--text2);margin-bottom:8px" id="scoreHint" data-i18n="score.hint">
@@ -729,7 +710,7 @@ const I18N={
     'tb.accidentals':'Vorzeichen','tb.length':'Länge','tb.insert':'Einfügen','tb.octave':'Oktave','tb.transpose':'Transponieren','tb.note':'Note',
     'ins.rest':'Pause','ins.bar':'| Takt',
     'theme.light':'Hell','theme.dark':'Dunkel',
-    'info.title':'Lied-Info','info.settings':'Einstellungen','f.title':'Titel','f.composer':'Komponist','f.meter':'Taktart','f.key':'Tonart','f.tempo':'Tempo (BPM)','f.unit':'Einheitslänge (L:)',
+    'info.title':'Lied-Info','info.settings':'Einstellungen','m.input':'Eingabe','f.title':'Titel','f.composer':'Komponist','f.meter':'Taktart','f.key':'Tonart','f.tempo':'Tempo (BPM)','f.unit':'Einheitslänge (L:)',
     'ph.optional':'optional','opt.none':'— Keine —',
     'meter.44':'4/4 – Vier Viertel','meter.34':'3/4 – Walzer','meter.24':'2/4 – Marsch','meter.68':'6/8 – Jig','meter.C':'C – Common time',
     'key.C':'C-Dur','key.G':'G-Dur (1♯)','key.D':'D-Dur (2♯)','key.A':'A-Dur (3♯)','key.F':'F-Dur (1♭)','key.Bb':'B-Dur (2♭)','key.Eb':'Es-Dur (3♭)','key.Am':'a-Moll','key.Em':'e-Moll','key.Dm':'d-Moll',
@@ -757,7 +738,7 @@ const I18N={
     'tb.accidentals':'Accidentals','tb.length':'Length','tb.insert':'Insert','tb.octave':'Octave','tb.transpose':'Transpose','tb.note':'Note',
     'ins.rest':'Rest','ins.bar':'| Bar',
     'theme.light':'Light','theme.dark':'Dark',
-    'info.title':'Song info','info.settings':'Settings','f.title':'Title','f.composer':'Composer','f.meter':'Meter','f.key':'Key','f.tempo':'Tempo (BPM)','f.unit':'Unit length (L:)',
+    'info.title':'Song info','info.settings':'Settings','m.input':'Input','f.title':'Title','f.composer':'Composer','f.meter':'Meter','f.key':'Key','f.tempo':'Tempo (BPM)','f.unit':'Unit length (L:)',
     'ph.optional':'optional','opt.none':'— None —',
     'meter.44':'4/4 – Common','meter.34':'3/4 – Waltz','meter.24':'2/4 – March','meter.68':'6/8 – Jig','meter.C':'C – Common time',
     'key.C':'C major','key.G':'G major (1♯)','key.D':'D major (2♯)','key.A':'A major (3♯)','key.F':'F major (1♭)','key.Bb':'B♭ major (2♭)','key.Eb':'E♭ major (3♭)','key.Am':'A minor','key.Em':'E minor','key.Dm':'D minor',
@@ -785,7 +766,7 @@ const I18N={
     'tb.accidentals':'Знаки','tb.length':'Длительность','tb.insert':'Вставить','tb.octave':'Октава','tb.transpose':'Транспонировать','tb.note':'Нота',
     'ins.rest':'Пауза','ins.bar':'| Такт',
     'theme.light':'Светлая','theme.dark':'Тёмная',
-    'info.title':'О песне','info.settings':'Настройки','f.title':'Название','f.composer':'Композитор','f.meter':'Размер','f.key':'Тональность','f.tempo':'Темп (BPM)','f.unit':'Базовая длит. (L:)',
+    'info.title':'О песне','info.settings':'Настройки','m.input':'Ввод','f.title':'Название','f.composer':'Композитор','f.meter':'Размер','f.key':'Тональность','f.tempo':'Темп (BPM)','f.unit':'Базовая длит. (L:)',
     'ph.optional':'необязательно','opt.none':'— Нет —',
     'meter.44':'4/4 – Четыре четверти','meter.34':'3/4 – Вальс','meter.24':'2/4 – Марш','meter.68':'6/8 – Джига','meter.C':'C – Common time',
     'key.C':'До мажор','key.G':'Соль мажор (1♯)','key.D':'Ре мажор (2♯)','key.A':'Ля мажор (3♯)','key.F':'Фа мажор (1♭)','key.Bb':'Си♭ мажор (2♭)','key.Eb':'Ми♭ мажор (3♭)','key.Am':'Ля минор','key.Em':'Ми минор','key.Dm':'Ре минор',
@@ -1514,27 +1495,20 @@ $('micSmooth').addEventListener('input',e=>{ micCfg.smoothWin=+e.target.value; i
 $('micRange').addEventListener('change',e=>{ micCfg.range=e.target.value; });
 $('micDsp').addEventListener('change',e=>{ micCfg.browserDsp=e.target.checked; if(micState){ stopMic(); startMic(); } });
 
-// ── Mobile settings drawer (sidebar) ─────────────────────────────────
-const openDrawer=()=>document.body.classList.add('drawer-open');
-const closeDrawer=()=>document.body.classList.remove('drawer-open');
-$('menuBtn').addEventListener('click',openDrawer);
-$('drawerClose').addEventListener('click',closeDrawer);
-$('backdrop').addEventListener('click',closeDrawer);
-
-// On phones, move the print/export/font/zoom bar into the settings drawer
-// so the score+keyboard own the screen; restore it on desktop.
+// ── Mobile: collapse/expand the input toolbar and the settings sidebar ──
+// One-pager layout — everything scrolls; these two blocks just fold away.
+function mToggle(btn,el){
+  const open=el.classList.toggle('m-collapsed')===false;
+  btn.classList.toggle('on',open);
+}
+$('tbBtn').addEventListener('click',()=>mToggle($('tbBtn'),$('mainToolbar')));
+$('menuBtn').addEventListener('click',()=>mToggle($('menuBtn'),$('sidebar')));
+// Defaults on phones: input toolbar open, settings folded.
 (function(){
-  const mq=window.matchMedia('(max-width:768px)');
-  const bar=document.querySelector('.bottom-bar');
-  if(!bar) return;
-  const home=document.createComment('bottom-bar-home');
-  bar.parentNode.insertBefore(home,bar);
-  const place=()=>{
-    if(mq.matches){ $('sidebar').appendChild(bar); }
-    else if(home.parentNode){ home.parentNode.insertBefore(bar,home.nextSibling); }
-  };
-  place();
-  mq.addEventListener('change',place);
+  if(window.matchMedia('(max-width:768px)').matches){
+    $('mainToolbar').classList.remove('m-collapsed'); $('tbBtn').classList.add('on');
+    $('sidebar').classList.add('m-collapsed');        $('menuBtn').classList.remove('on');
+  }
 })();
 
 
