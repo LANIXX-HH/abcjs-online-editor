@@ -10,6 +10,11 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release-Version (z. B. v1.0.0). Leer = nur Build, kein Release.'
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -64,17 +69,27 @@ jobs:
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
 
-      # On a version tag (e.g. v1.0.0): publish a downloadable GitHub Release
+      # Determine the release tag: from a pushed tag, or from the manual input.
+      - name: Resolve release tag
+        id: ver
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Rename APK for release
-        if: startsWith(github.ref, 'refs/tags/')
-        run: cp android/app/build/outputs/apk/debug/app-debug.apk "ABC-Editor-${{ github.ref_name }}.apk"
+        if: steps.ver.outputs.tag != ''
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk "ABC-Editor-${{ steps.ver.outputs.tag }}.apk"
 
       - name: Publish Release
-        if: startsWith(github.ref, 'refs/tags/')
+        if: steps.ver.outputs.tag != ''
         uses: softprops/action-gh-release@v2
         with:
-          name: ABC Editor ${{ github.ref_name }}
-          files: ABC-Editor-${{ github.ref_name }}.apk
+          tag_name: ${{ steps.ver.outputs.tag }}
+          name: ABC Editor ${{ steps.ver.outputs.tag }}
+          files: ABC-Editor-${{ steps.ver.outputs.tag }}.apk
           generate_release_notes: true
           body: |
             Android-App (Debug-signiert, installierbar). APK unten unter **Assets** herunterladen.
