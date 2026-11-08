@@ -259,8 +259,8 @@ input[type=checkbox]{accent-color:var(--blue)}
 
 /* ───────────── Mobile layout (one-pager, scrolls normally) ───────────── */
 @media (max-width:768px){
-  body{margin:0}
-  /* everything stacks and the whole page scrolls */
+  /* let the whole page scroll (desktop locks html/body to 100vh) */
+  html,body{height:auto;min-height:100%;overflow:visible;margin:0}
   .wrap{display:flex;flex-direction:column;height:auto;min-height:100dvh;border:none;border-radius:0;box-shadow:none;overflow:visible}
 
   /* order: voice bar, input toolbar, score+abc (main), settings sidebar last */
