@@ -41,16 +41,19 @@ jobs:
           set -e
           ASSETS=android/app/src/main/assets
           cp index.html "$ASSETS/index.html"
+          cp beta.html  "$ASSETS/beta.html"
           curl -fsSL -o "$ASSETS/abcjs-basic-min.js" \
             https://cdn.jsdelivr.net/npm/abcjs@6.4.3/dist/abcjs-basic-min.js
           # MP3 encoder — only bundled in the app, so the web page stays lean
           curl -fsSL -o "$ASSETS/lame.min.js" \
             https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js
-          # Point the <script> at the local abcjs and load lamejs right after it
-          sed -i 's#https://cdn\.jsdelivr\.net/npm/abcjs@6\.4\.3/dist/abcjs-basic-min\.js#abcjs-basic-min.js#' \
-            "$ASSETS/index.html"
-          sed -i 's#<script src="abcjs-basic-min.js"></script>#<script src="abcjs-basic-min.js"></script><script src="lame.min.js"></script>#' \
-            "$ASSETS/index.html"
+          # Point each page's <script> at the local abcjs and load lamejs right after it (offline parity)
+          for PAGE in index.html beta.html; do
+            sed -i 's#https://cdn\.jsdelivr\.net/npm/abcjs@6\.4\.3/dist/abcjs-basic-min\.js#abcjs-basic-min.js#' \
+              "$ASSETS/$PAGE"
+            sed -i 's#<script src="abcjs-basic-min.js"></script>#<script src="abcjs-basic-min.js"></script><script src="lame.min.js"></script>#' \
+              "$ASSETS/$PAGE"
+          done
           echo "Assets prepared:"; ls -la "$ASSETS"
 
       - name: Bundle piano soundfont (offline audio + MP3)
