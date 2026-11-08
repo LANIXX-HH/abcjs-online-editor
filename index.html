@@ -2057,7 +2057,7 @@ async function exportMp3(){
   if(typeof lamejs==='undefined'){ alert('MP3-Encoder nicht geladen'); return; }
   try{
     const buf=new ABCJS.synth.CreateSynth();
-    await buf.init({visualObj:visualObj[0]});
+    await buf.init({visualObj:visualObj[0], options:{}});
     await buf.prime();
     let d=await buf.download(), bytes;
     if(d instanceof ArrayBuffer) bytes=new Uint8Array(d);
