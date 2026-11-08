@@ -1,0 +1,57 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'android/**'
+      - '.github/workflows/android.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Embed web app + abcjs into the app (offline)
+        run: |
+          set -e
+          ASSETS=android/app/src/main/assets
+          cp index.html "$ASSETS/index.html"
+          curl -fsSL -o "$ASSETS/abcjs-basic-min.js" \
+            https://cdn.jsdelivr.net/npm/abcjs@6.4.3/dist/abcjs-basic-min.js
+          # Point the <script> at the local copy so the app runs without internet
+          sed -i 's#https://cdn\.jsdelivr\.net/npm/abcjs@6\.4\.3/dist/abcjs-basic-min\.js#abcjs-basic-min.js#' \
+            "$ASSETS/index.html"
+          echo "Assets prepared:"; ls -la "$ASSETS"
+
+      - name: Build debug APK
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      - name: Assemble
+        working-directory: android
+        run: gradle assembleDebug --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: abc-editor-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error

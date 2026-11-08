@@ -71,3 +71,7 @@ Drei Wege:
 ## Deployment (GitHub Pages)
 
 Der Stand wird bei jedem Push auf `main` automatisch per GitHub Actions nach GitHub Pages veröffentlicht (`.github/workflows/pages.yml`). Einmalig nötig: **Settings → Pages → Source: „GitHub Actions"**.
+
+## Android-App
+
+Derselbe Editor lässt sich als native Android-App (WebView, offline) bauen. Der Code liegt unter [`android/`](android/), ein GitHub-Actions-Workflow baut bei jedem Push ein installierbares Debug-APK. Details: [android/README.md](android/README.md).
