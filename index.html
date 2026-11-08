@@ -726,7 +726,7 @@ const I18N={
     'actions.title':'Aktionen','act.new':'Neu',
     'badge.notes':'{n} Noten','badge.bars':'{n} Takte',
     'score.hint':'Notenvorschau — Klick: Ton spielen | ↑↓ ziehen: Tonhöhe ändern',
-    'abc.label':'ABC-Notation','abc.colors':'Farben','btn.print':'🖨 Noten drucken','zoom.label':'Zoom','font.label':'Schrift',
+    'abc.label':'ABC-Notation','abc.colors':'Farben','btn.print':'🖨 PDF-Vorschau','btn.printNative':'🖨 Drucken','btn.mp3':'⬇ MP3','zoom.label':'Zoom','font.label':'Schrift',
     'msg.loaded':'✓ Geladen','msg.copied':'✓ Kopiert!','msg.saved':'✓ Gespeichert: {n}','msg.confirmClear':'Alles löschen?','msg.confirmDel':'"{n}" löschen?','msg.confirmOverwrite':'"{n}" überschreiben?','msg.savePrompt':'Name für das gespeicherte Lied:','msg.noNotes':'Keine Noten zum Drucken.','msg.popup':'Pop-up wurde blockiert. Bitte Pop-ups für diese Seite erlauben.','msg.midiNA':'MIDI nicht verfügbar','msg.voices':'{n} Stimmen:'
   },
   en:{
@@ -754,7 +754,7 @@ const I18N={
     'actions.title':'Actions','act.new':'New',
     'badge.notes':'{n} notes','badge.bars':'{n} bars',
     'score.hint':'Score preview — Click: play tone | drag ↑↓: change pitch',
-    'abc.label':'ABC notation','abc.colors':'Colors','btn.print':'🖨 Print score','zoom.label':'Zoom','font.label':'Font',
+    'abc.label':'ABC notation','abc.colors':'Colors','btn.print':'🖨 PDF preview','btn.printNative':'🖨 Print','btn.mp3':'⬇ MP3','zoom.label':'Zoom','font.label':'Font',
     'msg.loaded':'✓ Loaded','msg.copied':'✓ Copied!','msg.saved':'✓ Saved: {n}','msg.confirmClear':'Clear everything?','msg.confirmDel':'Delete "{n}"?','msg.confirmOverwrite':'Overwrite "{n}"?','msg.savePrompt':'Name for the saved song:','msg.noNotes':'No notes to print.','msg.popup':'Pop-up was blocked. Please allow pop-ups for this page.','msg.midiNA':'MIDI not available','msg.voices':'{n} voices:'
   },
   ru:{
@@ -782,7 +782,7 @@ const I18N={
     'actions.title':'Действия','act.new':'Новый',
     'badge.notes':'{n} нот','badge.bars':'{n} тактов',
     'score.hint':'Просмотр нот — Клик: проиграть | тянуть ↑↓: изменить высоту',
-    'abc.label':'ABC-нотация','abc.colors':'Цвета','btn.print':'🖨 Печать нот','zoom.label':'Масштаб','font.label':'Шрифт',
+    'abc.label':'ABC-нотация','abc.colors':'Цвета','btn.print':'🖨 PDF-просмотр','btn.printNative':'🖨 Печать','btn.mp3':'⬇ MP3','zoom.label':'Масштаб','font.label':'Шрифт',
     'msg.loaded':'✓ Загружено','msg.copied':'✓ Скопировано!','msg.saved':'✓ Сохранено: {n}','msg.confirmClear':'Очистить всё?','msg.confirmDel':'Удалить «{n}»?','msg.confirmOverwrite':'Перезаписать «{n}»?','msg.savePrompt':'Название для сохранённой песни:','msg.noNotes':'Нет нот для печати.','msg.popup':'Всплывающее окно заблокировано. Разрешите всплывающие окна.','msg.midiNA':'MIDI недоступен','msg.voices':'{n} голоса:'
   }
 };
@@ -792,9 +792,27 @@ function t(key,vars){
   if(vars) Object.keys(vars).forEach(k=>{ s=s.replace('{'+k+'}',vars[k]); });
   return s;
 }
+// Running inside the Android app? The app injects the AndroidExport bridge.
+const NATIVE = (typeof AndroidExport !== 'undefined');
+
+function fixupExportButtons(){
+  // Web: only PDF preview + ABC. App: native print + MIDI + MP3 + ABC.
+  const midi=document.getElementById('dlMidi'), wav=document.getElementById('dlWav'), print=document.getElementById('btnPrint');
+  if(NATIVE){
+    if(print) print.textContent=t('btn.printNative');
+    if(midi) midi.style.display='';
+    if(wav){ wav.style.display=''; wav.textContent=t('btn.mp3'); }
+  }else{
+    // print keeps its data-i18n "PDF-Vorschau" label (already applied)
+    if(midi) midi.style.display='none';
+    if(wav) wav.style.display='none';
+  }
+}
+
 function applyI18n(){
   document.querySelectorAll('[data-i18n]').forEach(el=>{ el.textContent=t(el.getAttribute('data-i18n')); });
   document.querySelectorAll('[data-i18n-ph]').forEach(el=>{ el.setAttribute('placeholder', t(el.getAttribute('data-i18n-ph'))); });
+  fixupExportButtons();
 }
 
 const PITCH_TABLE=[
@@ -1776,22 +1794,20 @@ $('btnSaveSong').addEventListener('click',()=>{
   actionMsg.textContent=t('msg.saved',{n:name});setTimeout(()=>actionMsg.textContent='',2500);
 });
 
-// ── Print only the score ──────────────────────────────────────────────
-$('btnPrint').addEventListener('click',()=>{
-  if(!visualObj||!visualObj[0]){ alert(t('msg.noNotes')); return; }
+// ── Print / PDF preview of the score ──────────────────────────────────
+// Build a clean, A4-wrapped print document (notes re-rendered so bars wrap
+// to the page width and systems are not cut across page breaks).
+function buildPrintHtml(withAutoPrint){
   const title=$('fTitle').value||'Noten';
-  // Re-render the notes at a fixed A4 staff width so abcjs re-wraps the bars
-  // to the printable page width — otherwise the on-screen layout (more bars
-  // per line than fit on A4) runs off the right edge when printed.
   const tmp=document.createElement('div');
   tmp.style.cssText='position:absolute;left:-10000px;top:0;width:720px';
   document.body.appendChild(tmp);
   let printBody='';
   try{
     ABCJS.renderAbc(tmp, abcTa.value, {
-      staffwidth:680,        // ≈ A4 printable width (21cm − 2×1.5cm) at 96dpi
+      staffwidth:680,
       wrap:{minSpacing:1.8,maxSpacing:2.8,preferredMeasuresPerLine:4},
-      oneSvgPerLine:true,    // one SVG per system → each can be kept whole across page breaks
+      oneSvgPerLine:true,
       scale:1,
       visualTranspose:state.transpose,
       add_classes:true
@@ -1800,8 +1816,6 @@ $('btnPrint').addEventListener('click',()=>{
   }catch(e){ printBody=''; }
   document.body.removeChild(tmp);
   if(!printBody){ const svg=paper0.querySelector('svg'); printBody=svg?svg.outerHTML:''; }
-  const w=window.open('','_blank','width=800,height=600');
-  if(!w){ alert(t('msg.popup')); return; }
   let fontHead='';
   if(scoreFont==='Ponomar Unicode'){
     fontHead='<style>@font-face{font-family:\'Ponomar Unicode\';src:url(\'https://cdn.jsdelivr.net/gh/typiconman/fonts-cu/Ponomar/PonomarUnicode.otf\') format(\'opentype\');}</style>';
@@ -1809,15 +1823,27 @@ $('btnPrint').addEventListener('click',()=>{
     fontHead='<link href="https://fonts.googleapis.com/css2?family='+scoreFont.replace(/ /g,'+')+'&display=swap" rel="stylesheet">';
   }
   const fontCss=scoreFont?'svg text,svg tspan{font-family:\''+scoreFont+'\',serif !important}':'';
-  w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+title+'</title>'+fontHead+
+  const autoPrint=withAutoPrint?'<scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},'+(scoreFont?700:250)+');};</scr'+'ipt>':'';
+  return '<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+title+'</title>'+fontHead+
     '<style>html,body{margin:0;background:#fff}body{padding:0}'+
     'svg{width:100%;max-width:100%;height:auto;display:block;margin:0 0 6px;break-inside:avoid;page-break-inside:avoid}'+
     'svg path,svg text,svg tspan,svg ellipse,svg rect{fill:#000!important;stroke:#000!important}'+
     'svg .abcjs-staff path{stroke-width:1px}'+fontCss+
     '@media print{@page{size:A4 portrait;margin:1.5cm}}</style></head><body>'+
-    printBody+
-    '<scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},'+(scoreFont?700:250)+');};</scr'+'ipt>'+
-    '</body></html>');
+    printBody+autoPrint+'</body></html>';
+}
+
+$('btnPrint').addEventListener('click',()=>{
+  if(!visualObj||!visualObj[0]){ alert(t('msg.noNotes')); return; }
+  if(NATIVE){
+    // Android: hand the print document to the native print service
+    try{ AndroidExport.printScore(buildPrintHtml(false), ($('fTitle').value||'Noten')); }catch(e){ alert(e.message); }
+    return;
+  }
+  // Web: open the PDF preview (print dialog → "Save as PDF")
+  const w=window.open('','_blank','width=800,height=600');
+  if(!w){ alert(t('msg.popup')); return; }
+  w.document.write(buildPrintHtml(true));
   w.document.close();
 });
 
@@ -1988,7 +2014,64 @@ $('btnClear').addEventListener('click',()=>{if(confirm(t('msg.confirmClear'))){v
 $('btnCopy').addEventListener('click',()=>{navigator.clipboard.writeText(abcTa.value).then(()=>{actionMsg.textContent=t('msg.copied');setTimeout(()=>actionMsg.textContent='',2000);});});
 $('dlAbc').addEventListener('click',()=>{var a=document.createElement('a');a.href='data:text/plain;charset=utf-8,'+encodeURIComponent(abcTa.value);a.download=($('fTitle').value||'lied').replace(/\s+/g,'_')+'.abc';a.click();});
 $('dlMidi').addEventListener('click',()=>{if(!visualObj||!visualObj[0])return;try{var d=ABCJS.synth.getMidiFile(abcTa.value,{midiOutputType:'encoded'});if(!d){alert(t('msg.midiNA'));return;}var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([d],{type:'audio/midi'}));a.download=($('fTitle').value||'lied').replace(/\s+/g,'_')+'.midi';a.click();}catch(e){alert(e.message);}});
-$('dlWav').addEventListener('click',async()=>{if(!visualObj||!visualObj[0])return;try{var buf=new ABCJS.synth.CreateSynth();await buf.init({visualObj:visualObj[0]});await buf.prime();var d=await buf.download();var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([d],{type:'audio/wav'}));a.download=($('fTitle').value||'lied').replace(/\s+/g,'_')+'.wav';a.click();}catch(e){console.warn(e);}});
+// Audio export → MP3 (Android app only; the WAV button is hidden on the web).
+// abcjs renders WAV; lamejs (injected by the app build) encodes it to MP3.
+function wavBytesToMp3(bytes){
+  const dv=new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  let channels=2, sampleRate=44100, dataOffset=44, dataLen=bytes.length-44;
+  if(String.fromCharCode(bytes[0],bytes[1],bytes[2],bytes[3])==='RIFF'){
+    let p=12;
+    while(p+8<=bytes.length){
+      const id=String.fromCharCode(bytes[p],bytes[p+1],bytes[p+2],bytes[p+3]);
+      const sz=dv.getUint32(p+4,true);
+      if(id==='fmt '){ channels=dv.getUint16(p+10,true); sampleRate=dv.getUint32(p+12,true); }
+      else if(id==='data'){ dataOffset=p+8; dataLen=sz; break; }
+      p+=8+sz+(sz&1);
+    }
+  }
+  const nSamples=Math.floor(dataLen/2);
+  const pcm=new Int16Array(nSamples);
+  for(let i=0;i<nSamples;i++) pcm[i]=dv.getInt16(dataOffset+i*2,true);
+  const enc=new lamejs.Mp3Encoder(channels, sampleRate, 128);
+  const block=1152, out=[];
+  if(channels===2){
+    const n=Math.floor(nSamples/2), left=new Int16Array(n), right=new Int16Array(n);
+    for(let i=0,j=0;j<n;i+=2,j++){ left[j]=pcm[i]; right[j]=pcm[i+1]; }
+    for(let i=0;i<n;i+=block){
+      const mp3=enc.encodeBuffer(left.subarray(i,i+block), right.subarray(i,i+block));
+      if(mp3.length) out.push(mp3);
+    }
+  }else{
+    for(let i=0;i<nSamples;i+=block){
+      const mp3=enc.encodeBuffer(pcm.subarray(i,i+block));
+      if(mp3.length) out.push(mp3);
+    }
+  }
+  const end=enc.flush(); if(end.length) out.push(end);
+  let len=0; out.forEach(a=>len+=a.length);
+  const res=new Uint8Array(len); let off=0; out.forEach(a=>{res.set(a,off);off+=a.length;});
+  return res;
+}
+async function exportMp3(){
+  if(!visualObj||!visualObj[0])return;
+  if(typeof lamejs==='undefined'){ alert('MP3-Encoder nicht geladen'); return; }
+  try{
+    const buf=new ABCJS.synth.CreateSynth();
+    await buf.init({visualObj:visualObj[0]});
+    await buf.prime();
+    let d=await buf.download(), bytes;
+    if(d instanceof ArrayBuffer) bytes=new Uint8Array(d);
+    else if(d && d.buffer) bytes=new Uint8Array(d.buffer);
+    else if(typeof d==='string' && d.indexOf('base64,')>=0){ const b=atob(d.split('base64,')[1]); bytes=new Uint8Array(b.length); for(let i=0;i<b.length;i++) bytes[i]=b.charCodeAt(i); }
+    else if(typeof d==='string'){ bytes=new Uint8Array(d.length); for(let i=0;i<d.length;i++) bytes[i]=d.charCodeAt(i)&0xff; }
+    else throw new Error('WAV-Format unbekannt');
+    const mp3=wavBytesToMp3(bytes);
+    let bin=''; const CH=0x8000;
+    for(let i=0;i<mp3.length;i+=CH) bin+=String.fromCharCode.apply(null, mp3.subarray(i,i+CH));
+    AndroidExport.save('data:audio/mpeg;base64,'+btoa(bin),'audio/mpeg');
+  }catch(e){ alert('MP3: '+e.message); }
+}
+$('dlWav').addEventListener('click',()=>{ if(NATIVE) exportMp3(); });
 
 // ── Liedtext (w:) toggle ──────────────────────────────────────────────
 function isEmptyLyric(line){ return /^w:\s*$/.test(line.trim()); }

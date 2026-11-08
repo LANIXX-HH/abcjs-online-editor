@@ -31,15 +31,20 @@ jobs:
       # step needed — it currently fails trying to install the obsolete
       # 'tools' package.
 
-      - name: Embed web app + abcjs into the app (offline)
+      - name: Embed web app + abcjs + lamejs into the app (offline)
         run: |
           set -e
           ASSETS=android/app/src/main/assets
           cp index.html "$ASSETS/index.html"
           curl -fsSL -o "$ASSETS/abcjs-basic-min.js" \
             https://cdn.jsdelivr.net/npm/abcjs@6.4.3/dist/abcjs-basic-min.js
-          # Point the <script> at the local copy so the app runs without internet
+          # MP3 encoder — only bundled in the app, so the web page stays lean
+          curl -fsSL -o "$ASSETS/lame.min.js" \
+            https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js
+          # Point the <script> at the local abcjs and load lamejs right after it
           sed -i 's#https://cdn\.jsdelivr\.net/npm/abcjs@6\.4\.3/dist/abcjs-basic-min\.js#abcjs-basic-min.js#' \
+            "$ASSETS/index.html"
+          sed -i 's#<script src="abcjs-basic-min.js"></script>#<script src="abcjs-basic-min.js"></script><script src="lame.min.js"></script>#' \
             "$ASSETS/index.html"
           echo "Assets prepared:"; ls -la "$ASSETS"
 

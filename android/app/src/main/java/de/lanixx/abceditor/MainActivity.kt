@@ -2,10 +2,13 @@ package de.lanixx.abceditor
 
 import android.Manifest
 import android.content.ContentValues
+import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.print.PrintAttributes
+import android.print.PrintManager
 import android.provider.MediaStore
 import android.util.Base64
 import android.webkit.JavascriptInterface
@@ -25,6 +28,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var web: WebView
     private var pendingPermissionRequest: PermissionRequest? = null
+    private var printWeb: WebView? = null  // kept alive while a print job spins up
 
     private val micPermLauncher = registerForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
@@ -98,7 +102,9 @@ class MainActivity : AppCompatActivity() {
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                if (web.canGoBack()) web.goBack() else { isEnabled = false; onBackPressedDispatcher.onBackPressed() }
+                // Don't quit the app (and lose the current song) on Back —
+                // go back in history if possible, otherwise send to background.
+                if (web.canGoBack()) web.goBack() else moveTaskToBack(true)
             }
         })
     }
@@ -107,6 +113,32 @@ class MainActivity : AppCompatActivity() {
         @JavascriptInterface
         fun save(dataUrl: String, mimetype: String) {
             runOnUiThread { saveDataUrl(dataUrl, mimetype) }
+        }
+
+        // Native printing: render the print HTML in an off-screen WebView,
+        // then hand it to the Android print service (→ printer or Save as PDF).
+        @JavascriptInterface
+        fun printScore(html: String, title: String) {
+            runOnUiThread {
+                val jobName = if (title.isNotBlank()) title else "Noten"
+                val pw = WebView(this@MainActivity)
+                pw.webViewClient = object : WebViewClient() {
+                    override fun onPageFinished(view: WebView, url: String?) {
+                        val pm = getSystemService(Context.PRINT_SERVICE) as PrintManager
+                        val adapter = view.createPrintDocumentAdapter(jobName)
+                        pm.print(
+                            jobName,
+                            adapter,
+                            PrintAttributes.Builder()
+                                .setMediaSize(PrintAttributes.MediaSize.ISO_A4)
+                                .build()
+                        )
+                        printWeb = null
+                    }
+                }
+                printWeb = pw
+                pw.loadDataWithBaseURL("file:///android_asset/", html, "text/html", "UTF-8", null)
+            }
         }
     }
 
