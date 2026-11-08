@@ -23,6 +23,8 @@ button{font-family:inherit}
 .body{display:grid;grid-template-columns:1fr 128px;min-height:0;position:relative}
 .result{position:relative;overflow:auto;background:var(--bg);padding:6px 8px}
 #paper{min-height:100%}
+#paper .sel-note,#paper .sel-note *{fill:var(--accent,#e3863a)!important;stroke:var(--accent,#e3863a)!important}
+#paper .abcjs-note{cursor:pointer}
 #hint{position:absolute;top:8px;left:10px;font-size:11px;color:var(--text2)}
 
 /* keyboard column */
@@ -216,7 +218,9 @@ function keyAbc(key){ // K: field
 const state={
   key:{letter:'C',acc:0,mode:'maj'},
   len:'1',            // '4','2','1','/','//'
-  body:'',            // ABC note body
+  tokens:[],          // [{t:'C', kind:'note', midi:60} | {t:'|',kind:'bar'} | ...]
+  cursor:0,           // insert position (before this index)
+  sel:-1,             // selected note index (for drag)
   midLo:48, midHi:84, // keyboard range C3..C6
 };
 let KM=keyMap(state.key);
@@ -266,21 +270,53 @@ function scrollToRoot(){
   });
 }
 
-/* ================= editing ================= */
+/* ================= editing (token model) ================= */
 function lenSuffix(){ return state.len==='1'?'':state.len; }
-function insertNote(midi){
+function tokenFor(midi){
   const pc=((midi%12)+12)%12, info=KM.map[pc];
-  const tok=abcToken(info.letter,info.acc,KM.sig,midi)+lenSuffix();
-  state.body += (state.body && !state.body.endsWith(' ')?' ':'') + tok;
+  return abcToken(info.letter,info.acc,KM.sig,midi)+lenSuffix();
+}
+function insertNote(midi){
+  state.tokens.splice(state.cursor,0,{t:tokenFor(midi),kind:'note',midi});
+  state.cursor++; state.sel=state.cursor-1;
   playMidi(midi); render(true);
 }
-function insertRaw(s){ state.body += (state.body?' ':'') + s; render(true); }
-function delLast(){
-  state.body=state.body.replace(/\s*\S+\s*$/,'');
-  render(true);
+function insertRaw(s,kind){
+  state.tokens.splice(state.cursor,0,{t:s,kind:kind||'sym'});
+  state.cursor++; state.sel=-1; render(true);
+}
+function delAtCursor(){
+  if(state.cursor>0){ state.tokens.splice(state.cursor-1,1); state.cursor--; }
+  state.sel=-1; render(true);
+}
+// move a note's pitch by diatonic steps within the current scale
+function scalePitches(){
+  const arr=[]; for(let m=state.midLo-12;m<=state.midHi+12;m++){ const pc=((m%12)+12)%12; if(KM.map[pc].inScale) arr.push(m); }
+  return arr;
+}
+function changePitch(idx, step){
+  const tk=state.tokens[idx]; if(!tk||tk.kind!=='note')return;
+  const suf=(tk.t.match(/[0-9\/]+$/)||[''])[0];     // keep length suffix
+  const sp=scalePitches();
+  let ni=0, bd=1e9; sp.forEach((m,i)=>{const d=Math.abs(m-tk.midi); if(d<bd){bd=d;ni=i;}});
+  const nm=sp[Math.max(0,Math.min(sp.length-1, ni+step))];
+  const pc=((nm%12)+12)%12, info=KM.map[pc];
+  tk.midi=nm; tk.t=abcToken(info.letter,info.acc,KM.sig,nm)+suf;
+  playMidi(nm); render(true);
 }
 
 /* ================= render ================= */
+let lastRanges=[], headerLen=0;
+function buildBody(){
+  let str=''; const ranges=[];
+  state.tokens.forEach((tk,i)=>{
+    if(i>0) str+=(tk.kind==='newline'?'':' ');
+    const start=str.length;
+    str+=(tk.kind==='newline'?'\n':tk.t);
+    ranges.push({i,start,end:str.length,kind:tk.kind});
+  });
+  return {str,ranges};
+}
 function fullAbc(){
   let h='X:1\n';
   if($('fTitle').value) h+='T:'+$('fTitle').value+'\n';
@@ -289,8 +325,9 @@ function fullAbc(){
   h+='L:1/4\n';
   if($('fTempo').value) h+='Q:1/4='+$('fTempo').value+'\n';
   h+='K:'+keyAbc(state.key)+' clef='+$('fClef').value+'\n';
-  h+=(state.body||'');
-  return h;
+  headerLen=h.length;
+  const bb=buildBody(); lastRanges=bb.ranges;
+  return h+bb.str;
 }
 let rt=null;
 function render(fromButtons){
@@ -298,13 +335,47 @@ function render(fromButtons){
   clearTimeout(rt);
   rt=setTimeout(()=>{
     try{
-      const arr=ABCJS.renderAbc('paper', $('abcTa').value, {responsive:'resize', add_classes:true, staffwidth: Math.max(240,$('resultWrap').clientWidth-24)});
+      const arr=ABCJS.renderAbc('paper', $('abcTa').value, {
+        responsive:'resize', add_classes:true, dragging:true, selectTypes:['note'],
+        staffwidth: Math.max(240,$('resultWrap').clientWidth-24),
+        clickListener:onNoteClick
+      });
       visualObj=arr&&arr[0];
+      paintSelection();
     }catch(e){ console.warn(e); }
   }, 60);
 }
+function tokenAtChar(startChar){
+  const bc=startChar-headerLen;
+  for(const r of lastRanges){ if(bc>=r.start && bc<r.end) return r.i; }
+  return -1;
+}
+function onNoteClick(abcElem, tn, classes, analysis, drag, ev){
+  if(abcElem.startChar==null) return;
+  const idx=tokenAtChar(abcElem.startChar);
+  if(idx<0) return;
+  const tk=state.tokens[idx];
+  if(drag && drag.step && state.sel>=0 && state.tokens[state.sel] && state.tokens[state.sel].kind==='note'){
+    changePitch(state.sel, drag.step); return;
+  }
+  if(tk.kind==='note'){ state.sel=idx; state.cursor=idx+1; playMidi(tk.midi); paintSelection(); }
+}
+function paintSelection(){
+  const paper=$('paper');
+  paper.querySelectorAll('.sel-note').forEach(e=>e.classList.remove('sel-note'));
+  if(state.sel<0||!state.tokens[state.sel]) return;
+  const r=lastRanges.find(x=>x.i===state.sel); if(!r) return;
+  // abcjs tags notes with class "abcjs-note" and data; match by char via abcjs internal is hard,
+  // so highlight by index position among note elements
+  const noteTokIdx=state.tokens.map((t,i)=>({t,i})).filter(o=>o.t.kind==='note').findIndex(o=>o.i===state.sel);
+  const noteEls=paper.querySelectorAll('.abcjs-note');
+  if(noteEls[noteTokIdx]) noteEls[noteTokIdx].classList.add('sel-note');
+}
 
 /* ================= audio (click/play) ================= */
+// Auto-detect: Android WebView injects AndroidExport → use bundled local soundfont; web → CDN.
+const SOUNDFONT_URL=(typeof AndroidExport!=='undefined')?'soundfont/':'https://paulrosen.github.io/midi-js-soundfonts/abcjs/';
+const SOUNDFONT_VOL=0.4;
 function playMidi(midi){
   if(!window.ABCJS||!ABCJS.synth||!ABCJS.synth.supportsAudio())return;
   try{ ABCJS.synth.playEvent([{pitch:midi,volume:90,duration:.3,instrument:0,start:0,gap:0}],[],300).catch(()=>{}); }catch(e){}
@@ -353,15 +424,14 @@ $('keyBtn').onclick=()=>{ buildKeyPop(); openPop($('keyPop'),$('keyBtn')); };
 $('symBtn').onclick=()=>openPop($('symPop'),$('symBtn'));
 $('symPop').querySelectorAll('button').forEach(b=>b.onclick=()=>{
   const s=b.dataset.sym;
-  if(s==='newline') state.body+=' $'; // placeholder; abcjs uses newline char
-  if(s==='newline'){ state.body=state.body.replace(/ \$$/,''); state.body+='\n'; }
-  if(s==='repstart') insertRaw('|:');
-  if(s==='repend') insertRaw(':|');
-  render(true); closePops();
+  if(s==='newline') insertRaw('','newline');
+  else if(s==='repstart') insertRaw('|:','bar');
+  else if(s==='repend') insertRaw(':|','bar');
+  closePops();
 });
-$('pauseBtn').onclick=()=>insertRaw('z'+lenSuffix());
-$('barBtn').onclick=()=>insertRaw('|');
-$('delBtn').onclick=delLast;
+$('pauseBtn').onclick=()=>insertRaw('z'+lenSuffix(),'rest');
+$('barBtn').onclick=()=>insertRaw('|','bar');
+$('delBtn').onclick=delAtCursor;
 
 ['fTitle','fComposer','fMeter','fTempo','fClef'].forEach(id=>$(id).addEventListener('input',()=>render(true)));
 $('abcTa').addEventListener('input',()=>{ render(false); });
@@ -371,7 +441,7 @@ $('btnAbc').onclick=()=>{ const a=document.createElement('a');a.href=URL.createO
 $('playBtn').onclick=async()=>{
   if(!visualObj||!ABCJS.synth.supportsAudio())return;
   try{ const s=new ABCJS.synth.CreateSynth();
-    await s.init({visualObj,options:{soundFontUrl:'https://paulrosen.github.io/midi-js-soundfonts/abcjs/',soundFontVolumeMultiplier:0.4}});
+    await s.init({visualObj,options:{soundFontUrl:SOUNDFONT_URL,soundFontVolumeMultiplier:SOUNDFONT_VOL}});
     await s.prime(); s.start();
   }catch(e){ console.warn(e); }
 };
