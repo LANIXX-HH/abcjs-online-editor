@@ -94,7 +94,7 @@ button{font-family:inherit}
 <body>
 <div class="app" id="app">
   <div class="topbar">
-    <span class="menu-toggle-wrap"><button class="tb-btn" id="menuBtn">☰ Menü</button></span>
+    <span class="menu-toggle-wrap"><button class="tb-btn" id="menuBtn"><span data-i18n="tb.menu">☰ Menü</span></button></span>
     <span class="tb-title">ABC-Editor <span style="color:var(--text2);font-weight:400">Beta</span></span>
     <button class="tb-btn" id="micBtn" title="Singen → Noten">🎤</button>
     <span class="spacer"></span>
@@ -104,49 +104,52 @@ button{font-family:inherit}
   <div class="body">
     <!-- MENU (left on desktop, drawer on mobile) -->
     <div class="menu" id="menu">
-      <div class="mhead"><b>Einstellungen</b><button class="mx" id="menuClose">✕</button></div>
-      <h3>Lied</h3>
-      <div class="mrow"><label>Titel</label><input id="fTitle" value="Neues Lied"></div>
-      <div class="mrow"><label>Komponist</label><input id="fComposer" placeholder="optional"></div>
-      <div class="mrow"><label>Taktart</label>
+      <div class="mhead"><b data-i18n="m.settings">Einstellungen</b>
+        <span style="display:flex;gap:6px;align-items:center">
+          <select id="langSel" style="width:auto;padding:3px 6px;font-size:12px"><option value="de">DE</option><option value="en">EN</option><option value="ru">RU</option></select>
+          <button class="mx" id="menuClose">✕</button></span></div>
+      <h3 data-i18n="m.song">Lied</h3>
+      <div class="mrow"><label data-i18n="m.title">Titel</label><input id="fTitle" value="Neues Lied"></div>
+      <div class="mrow"><label data-i18n="m.composer">Komponist</label><input id="fComposer" placeholder="optional"></div>
+      <div class="mrow"><label data-i18n="m.meter">Taktart</label>
         <select id="fMeter"><option>4/4</option><option>3/4</option><option>2/4</option><option>6/8</option><option>C</option></select></div>
-      <div class="mrow"><label>Tempo (BPM)</label><input id="fTempo" type="number" value="100" min="20" max="240"></div>
-      <h3>Stimmen</h3>
-      <div class="mrow"><label>Modus</label>
-        <select id="fVoiceMode"><option value="single">Einstimmig</option><option value="multi">Mehrstimmig (SATB)</option></select></div>
-      <div class="mrow" id="voiceCountRow" hidden><label>Anzahl Stimmen</label>
+      <div class="mrow"><label data-i18n="m.tempo">Tempo (BPM)</label><input id="fTempo" type="number" value="100" min="20" max="240"></div>
+      <h3 data-i18n="m.voices">Stimmen</h3>
+      <div class="mrow"><label data-i18n="m.mode">Modus</label>
+        <select id="fVoiceMode"><option value="single" data-i18n="m.single">Einstimmig</option><option value="multi" data-i18n="m.multi">Mehrstimmig (SATB)</option></select></div>
+      <div class="mrow" id="voiceCountRow" hidden><label data-i18n="m.vcount">Anzahl Stimmen</label>
         <select id="fVoiceCount"><option value="2">2 (S/A)</option><option value="3">3 (S/A/T)</option><option value="4">4 (S/A/T/B)</option></select></div>
       <div id="voiceEditors"></div>
-      <h3>Mikrofon (Singen → Noten)</h3>
-      <div class="mrow"><label>Stimmlage</label>
-        <select id="micRange"><option value="auto">Automatisch</option><option value="low">Tief (Bass/Tenor)</option><option value="mid">Mittel</option><option value="high">Hoch (Sopran)</option></select></div>
-      <div class="mrow"><label>Empfindlichkeit (Pegel-Schwelle)</label>
+      <h3 data-i18n="m.mic">Mikrofon (Singen → Noten)</h3>
+      <div class="mrow"><label data-i18n="m.range">Stimmlage</label>
+        <select id="micRange"><option value="auto" data-i18n="m.range.auto">Automatisch</option><option value="low" data-i18n="m.range.low">Tief (Bass/Tenor)</option><option value="mid" data-i18n="m.range.mid">Mittel</option><option value="high" data-i18n="m.range.high">Hoch (Sopran)</option></select></div>
+      <div class="mrow"><label data-i18n="m.gate">Empfindlichkeit (Pegel-Schwelle)</label>
         <input id="micGate" type="range" min="2" max="40" value="10"></div>
-      <div class="mrow"><label><input type="checkbox" id="micDsp" style="width:auto;margin-right:6px">Browser-Rauschunterdrückung</label></div>
-      <h3>Darstellung <span style="text-transform:none;font-weight:400">(ändert Noten nicht)</span></h3>
-      <div class="mrow" id="clefRow"><label>Notenschlüssel</label>
-        <select id="fClef"><option value="treble">Violin</option><option value="bass">Bass</option><option value="alto">Alt</option></select></div>
-      <h3>ABC-Code</h3>
+      <div class="mrow"><label><input type="checkbox" id="micDsp" style="width:auto;margin-right:6px"><span data-i18n="m.dsp">Browser-Rauschunterdrückung</span></label></div>
+      <h3><span data-i18n="m.display">Darstellung</span> <span style="text-transform:none;font-weight:400" data-i18n="m.displayhint">(ändert Noten nicht)</span></h3>
+      <div class="mrow" id="clefRow"><label data-i18n="m.clef">Notenschlüssel</label>
+        <select id="fClef"><option value="treble" data-i18n="m.clef.treble">Violin</option><option value="bass" data-i18n="m.clef.bass">Bass</option><option value="alto" data-i18n="m.clef.alto">Alt</option></select></div>
+      <h3 data-i18n="m.abc">ABC-Code</h3>
       <textarea id="abcTa" spellcheck="false"></textarea>
       <div class="mact">
-        <button id="btnApplyAbc">↻ ABC übernehmen</button>
-        <button id="btnCopy">Kopieren</button>
+        <button id="btnApplyAbc" data-i18n="b.apply">↻ ABC übernehmen</button>
+        <button id="btnCopy" data-i18n="b.copy">Kopieren</button>
         <button id="btnAbc">⬇ ABC</button>
-        <button id="btnPrint">🖨 PDF-Vorschau</button>
+        <button id="btnPrint" data-i18n="b.print">🖨 PDF-Vorschau</button>
         <button id="btnMidi" style="display:none">⬇ MIDI</button>
         <button id="btnMp3" style="display:none">⬇ MP3</button>
       </div>
-      <h3>Vorlagen</h3>
+      <h3 data-i18n="m.templates">Vorlagen</h3>
       <div class="mact" id="tplRow"></div>
-      <h3>Gespeicherte Lieder</h3>
+      <h3 data-i18n="m.saved">Gespeicherte Lieder</h3>
       <div id="savedList" style="margin:0 12px"></div>
-      <div class="mact"><button id="btnSaveSong">＋ Aktuelles Lied speichern</button></div>
+      <div class="mact"><button id="btnSaveSong" data-i18n="b.save">＋ Aktuelles Lied speichern</button></div>
     </div>
     <div class="backdrop" id="backdrop"></div>
 
     <!-- RESULT -->
     <div class="result" id="resultWrap">
-      <span id="hint">Tippe rechts eine Note · Grundton unten (orange)</span>
+      <span id="hint" data-i18n="hint">Tippe rechts eine Note · Grundton unten (orange)</span>
       <div id="paper"></div>
       <div class="micmon" id="micMon" hidden>
         <span class="mm-note" id="mmNote">—</span>
@@ -159,16 +162,16 @@ button{font-family:inherit}
     <!-- KEYBOARD -->
     <div class="kbd">
       <div class="kfnrow">
-        <button class="kfn" id="symBtn">Zeichen ▾</button>
+        <button class="kfn" id="symBtn"><span data-i18n="k.sym">Zeichen</span> ▾</button>
         <button class="kfn y" id="lenBtn">♩ ▾</button>
       </div>
       <div class="keys-scroll" id="keysScroll">
         <div class="keys" id="keys"></div>
       </div>
       <div class="kactrow">
-        <button class="kfn" id="pauseBtn">Pause</button>
-        <button class="kfn" id="barBtn">Takt |</button>
-        <button class="kfn" id="delBtn">⌫ Löschen</button>
+        <button class="kfn" id="pauseBtn" data-i18n="k.pause">Pause</button>
+        <button class="kfn" id="barBtn" data-i18n="k.bar">Takt |</button>
+        <button class="kfn" id="delBtn" data-i18n="k.del">⌫ Löschen</button>
         <button class="kfn y" id="keyBtn">C-Dur ▾</button>
       </div>
     </div>
@@ -177,23 +180,70 @@ button{font-family:inherit}
 
 <!-- length popover -->
 <div class="pop" id="lenPop">
-  <button data-len="4">𝅝 Ganze</button>
-  <button data-len="2">𝅗𝅥 Halbe</button>
-  <button data-len="1" class="sel">♩ Viertel</button>
-  <button data-len="/">♪ Achtel</button>
-  <button data-len="//">𝅘𝅥𝅯 Sechzehntel</button>
+  <button data-len="4"><span data-i18n="len.whole">𝅝 Ganze</span></button>
+  <button data-len="2"><span data-i18n="len.half">𝅗𝅥 Halbe</span></button>
+  <button data-len="1" class="sel"><span data-i18n="len.quarter">♩ Viertel</span></button>
+  <button data-len="/"><span data-i18n="len.eighth">♪ Achtel</span></button>
+  <button data-len="//"><span data-i18n="len.sixteenth">𝅘𝅥𝅯 Sechzehntel</span></button>
 </div>
 <!-- key popover -->
 <div class="pop" id="keyPop"></div>
 <!-- symbol popover -->
 <div class="pop" id="symPop">
-  <button data-sym="newline">⏎ Neue Zeile</button>
-  <button data-sym="repstart">|: Wdh. auf</button>
-  <button data-sym="repend">:| Wdh. zu</button>
+  <button data-sym="newline" data-i18n="sym.newline">⏎ Neue Zeile</button>
+  <button data-sym="repstart" data-i18n="sym.repstart">|: Wdh. auf</button>
+  <button data-sym="repend" data-i18n="sym.repend">:| Wdh. zu</button>
 </div>
 
 <script>
 const $=id=>document.getElementById(id);
+
+/* ================= i18n ================= */
+const I18N={
+  de:{'tb.menu':'☰ Menü','m.settings':'Einstellungen','m.song':'Lied','m.title':'Titel','m.composer':'Komponist','m.meter':'Taktart','m.tempo':'Tempo (BPM)',
+    'm.voices':'Stimmen','m.mode':'Modus','m.single':'Einstimmig','m.multi':'Mehrstimmig (SATB)','m.vcount':'Anzahl Stimmen',
+    'm.mic':'Mikrofon (Singen → Noten)','m.range':'Stimmlage','m.range.auto':'Automatisch','m.range.low':'Tief (Bass/Tenor)','m.range.mid':'Mittel','m.range.high':'Hoch (Sopran)',
+    'm.gate':'Empfindlichkeit (Pegel-Schwelle)','m.dsp':'Browser-Rauschunterdrückung','m.display':'Darstellung','m.displayhint':'(ändert Noten nicht)',
+    'm.clef':'Notenschlüssel','m.clef.treble':'Violin','m.clef.bass':'Bass','m.clef.alto':'Alt','m.abc':'ABC-Code','m.templates':'Vorlagen','m.saved':'Gespeicherte Lieder',
+    'b.apply':'↻ ABC übernehmen','b.copy':'Kopieren','b.print':'🖨 PDF-Vorschau','b.printNative':'🖨 Noten drucken','b.save':'＋ Aktuelles Lied speichern',
+    'k.sym':'Zeichen','k.pause':'Pause','k.bar':'Takt |','k.del':'⌫ Löschen','hint':'Tippe rechts eine Note · Grundton unten (orange)',
+    'sym.newline':'⏎ Neue Zeile','sym.repstart':'|: Wdh. auf','sym.repend':':| Wdh. zu',
+    'len.whole':'𝅝 Ganze','len.half':'𝅗𝅥 Halbe','len.quarter':'♩ Viertel','len.eighth':'♪ Achtel','len.sixteenth':'𝅘𝅥𝅯 Sechzehntel',
+    'v.voice':'Stimme','saved.empty':'Noch nichts gespeichert.'},
+  en:{'tb.menu':'☰ Menu','m.settings':'Settings','m.song':'Song','m.title':'Title','m.composer':'Composer','m.meter':'Time signature','m.tempo':'Tempo (BPM)',
+    'm.voices':'Voices','m.mode':'Mode','m.single':'Single voice','m.multi':'Multi-voice (SATB)','m.vcount':'Number of voices',
+    'm.mic':'Microphone (sing → notes)','m.range':'Vocal range','m.range.auto':'Automatic','m.range.low':'Low (bass/tenor)','m.range.mid':'Mid','m.range.high':'High (soprano)',
+    'm.gate':'Sensitivity (level threshold)','m.dsp':'Browser noise suppression','m.display':'Display','m.displayhint':'(does not change notes)',
+    'm.clef':'Clef','m.clef.treble':'Treble','m.clef.bass':'Bass','m.clef.alto':'Alto','m.abc':'ABC code','m.templates':'Templates','m.saved':'Saved songs',
+    'b.apply':'↻ Apply ABC','b.copy':'Copy','b.print':'🖨 PDF preview','b.printNative':'🖨 Print score','b.save':'＋ Save current song',
+    'k.sym':'Symbols','k.pause':'Rest','k.bar':'Bar |','k.del':'⌫ Delete','hint':'Tap a note on the right · root at bottom (orange)',
+    'sym.newline':'⏎ New line','sym.repstart':'|: Repeat start','sym.repend':':| Repeat end',
+    'len.whole':'𝅝 Whole','len.half':'𝅗𝅥 Half','len.quarter':'♩ Quarter','len.eighth':'♪ Eighth','len.sixteenth':'𝅘𝅥𝅯 Sixteenth',
+    'v.voice':'Voice','saved.empty':'Nothing saved yet.'},
+  ru:{'tb.menu':'☰ Меню','m.settings':'Настройки','m.song':'Песня','m.title':'Название','m.composer':'Композитор','m.meter':'Размер','m.tempo':'Темп (BPM)',
+    'm.voices':'Голоса','m.mode':'Режим','m.single':'Один голос','m.multi':'Многоголосие (SATB)','m.vcount':'Число голосов',
+    'm.mic':'Микрофон (пение → ноты)','m.range':'Диапазон','m.range.auto':'Автоматически','m.range.low':'Низкий (бас/тенор)','m.range.mid':'Средний','m.range.high':'Высокий (сопрано)',
+    'm.gate':'Чувствительность (порог уровня)','m.dsp':'Шумоподавление браузера','m.display':'Отображение','m.displayhint':'(не меняет ноты)',
+    'm.clef':'Ключ','m.clef.treble':'Скрипичный','m.clef.bass':'Басовый','m.clef.alto':'Альтовый','m.abc':'ABC-код','m.templates':'Шаблоны','m.saved':'Сохранённые песни',
+    'b.apply':'↻ Применить ABC','b.copy':'Копировать','b.print':'🖨 Просмотр PDF','b.printNative':'🖨 Печать нот','b.save':'＋ Сохранить песню',
+    'k.sym':'Знаки','k.pause':'Пауза','k.bar':'Такт |','k.del':'⌫ Удалить','hint':'Нажмите ноту справа · тоника внизу (оранжевая)',
+    'sym.newline':'⏎ Новая строка','sym.repstart':'|: Начало повтора','sym.repend':':| Конец повтора',
+    'len.whole':'𝅝 Целая','len.half':'𝅗𝅥 Половинная','len.quarter':'♩ Четверть','len.eighth':'♪ Восьмая','len.sixteenth':'𝅘𝅥𝅯 Шестнадцатая',
+    'v.voice':'Голос','saved.empty':'Пока ничего не сохранено.'},
+};
+let LANG=(function(){ try{ return localStorage.getItem('abcBetaLang')||((navigator.language||'de').slice(0,2)); }catch(e){ return 'de'; } })();
+if(!I18N[LANG]) LANG='de';
+function t(k){ return (I18N[LANG]&&I18N[LANG][k])||(I18N.de[k])||k; }
+function applyI18n(){
+  document.querySelectorAll('[data-i18n]').forEach(el=>{ el.textContent=t(el.getAttribute('data-i18n')); });
+  // dynamic bits
+  $('micBtn').title=t('m.mic');
+  if(typeof NATIVE!=='undefined' && NATIVE) $('btnPrint').textContent=t('b.printNative');
+  if(typeof buildVoicebar==='function') buildVoicebar();
+  if(typeof buildVoiceEditors==='function') buildVoiceEditors();
+  if(typeof renderSaved==='function') renderSaved();
+}
+function setLang(l){ LANG=I18N[l]?l:'de'; try{ localStorage.setItem('abcBetaLang',LANG); }catch(e){} applyI18n(); }
 
 /* ================= music theory ================= */
 const NAT={C:0,D:2,E:4,F:5,G:7,A:9,B:11};
@@ -575,7 +625,7 @@ function buildVoiceEditors(){
   for(let vi=0; vi<state.voiceCount; vi++){
     const v=state.voices[vi], def=VOICE_DEFS[vi];
     const wrap=document.createElement('div'); wrap.className='mrow';
-    wrap.innerHTML='<label style="color:'+VOICE_COLORS[vi]+';font-weight:700">Stimme '+(vi+1)+'</label>'+
+    wrap.innerHTML='<label style="color:'+VOICE_COLORS[vi]+';font-weight:700">'+t('v.voice')+' '+(vi+1)+'</label>'+
       '<input data-vn="'+vi+'" value="'+(v.name||def.name)+'" style="margin-bottom:5px">'+
       '<select data-vc="'+vi+'">'+
         '<option value="treble"'+(v.clef==='treble'?' selected':'')+'>Violin</option>'+
@@ -857,7 +907,7 @@ function setSaved(a){ try{ localStorage.setItem(SAVE_KEY,JSON.stringify(a)); }ca
 function renderSaved(){
   const list=$('savedList'); list.innerHTML='';
   const songs=getSaved();
-  if(!songs.length){ list.innerHTML='<div style="font-size:11px;color:var(--text2);font-style:italic">Noch nichts gespeichert.</div>'; return; }
+  if(!songs.length){ list.innerHTML='<div style="font-size:11px;color:var(--text2);font-style:italic">'+t('saved.empty')+'</div>'; return; }
   songs.forEach((song,i)=>{
     const row=document.createElement('div'); row.style.cssText='display:flex;gap:4px;margin-bottom:4px';
     const load=document.createElement('button'); load.className=''; load.style.cssText='flex:1;border:1.5px solid var(--border);border-radius:8px;background:var(--bg);font-size:12px;font-weight:600;padding:6px 8px;cursor:pointer;text-align:left';
@@ -879,9 +929,13 @@ $('btnApplyAbc').onclick=()=>{ loadAbc($('abcTa').value); };
 
 window.addEventListener('resize',()=>render(false));
 
+$('langSel').value=LANG;
+$('langSel').onchange=()=>setLang($('langSel').value);
+
 /* init */
 buildTemplates(); renderSaved();
 $('keyBtn').textContent='C-Dur ▾';
 buildKeyboard(); scrollToRoot(); render(true);
+applyI18n();
 </script>
 </body></html>
