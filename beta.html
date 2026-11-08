@@ -537,9 +537,9 @@ function fullAbc(){
     bb.ranges.forEach(r=>lastMap.push({v:0,i:r.i,start:h.length+r.start,end:h.length+r.end,kind:r.kind}));
     out=h+bb.str;
   } else {
-    // %%score line groups voices on braces
+    // each voice on its own staff, joined by a choir brace
     const ids=VOICE_DEFS.slice(0,n).map(d=>d.id);
-    h+='%%score ('+ids.join(' ')+')\n';
+    h+='%%score {'+ids.join(' ')+'}\n';
     h+='K:'+keyAbc(state.key)+'\n';
     out=h;
     for(let vi=0; vi<n; vi++){
@@ -891,7 +891,7 @@ const TEMPLATES=[
   ['C-Dur Tonleiter','X:1\nT:C-Dur Tonleiter\nM:4/4\nL:1/4\nQ:1/4=100\nK:C clef=treble\nC D E F | G A B c | c B A G | F E D C |'],
   ['Hänschen Klein','X:1\nT:Hänschen Klein\nC:Volkslied\nM:4/4\nL:1/4\nQ:1/4=110\nK:G clef=treble\nd B B | A G G | G A B c | d d d |\nd B B | A G G | G B d B | G G G |'],
   ['Walzer','X:1\nT:Walzer\nM:3/4\nL:1/4\nQ:1/4=150\nK:C clef=treble\nG E G | A F A | B G B | c c c |\nG E G | A F A | G G G |'],
-  ['SATB Beispiel','X:1\nT:SATB Beispiel\nM:4/4\nL:1/4\nQ:1/4=100\n%%score (S A T B)\nK:C\nV:S clef=treble name="Sopran"\nc d e f | g a g f | e e c c |\nV:A clef=treble name="Alt"\nE F G A | B c B A | G G E E |\nV:T clef=treble name="Tenor"\nG, A, B, C | D E D C | B, B, G, G, |\nV:B clef=bass name="Bass"\nC, C, G,, C, | G,, C, G,, C, | C, C, C, C, |'],
+  ['SATB Beispiel','X:1\nT:SATB Beispiel\nM:4/4\nL:1/4\nQ:1/4=100\n%%score {S A T B}\nK:C\nV:S clef=treble name="Sopran"\nc d e f | g a g f | e e c c |\nV:A clef=treble name="Alt"\nE F G A | B c B A | G G E E |\nV:T clef=treble name="Tenor"\nG, A, B, C | D E D C | B, B, G, G, |\nV:B clef=bass name="Bass"\nC, C, G,, C, | G,, C, G,, C, | C, C, C, C, |'],
 ];
 function buildTemplates(){
   const r=$('tplRow'); r.innerHTML='';
