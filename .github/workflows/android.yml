@@ -53,6 +53,19 @@ jobs:
             "$ASSETS/index.html"
           echo "Assets prepared:"; ls -la "$ASSETS"
 
+      - name: Bundle piano soundfont (offline audio + MP3)
+        run: |
+          set -e
+          ASSETS=android/app/src/main/assets
+          # Grab just the grand-piano mp3 notes (abcjs soundfont format)
+          git clone --depth 1 --filter=blob:none --sparse \
+            https://github.com/paulrosen/midi-js-soundfonts sf
+          git -C sf sparse-checkout set abcjs/acoustic_grand_piano-mp3
+          mkdir -p "$ASSETS/soundfont"
+          cp -r sf/abcjs/acoustic_grand_piano-mp3 "$ASSETS/soundfont/"
+          rm -rf sf
+          echo "Soundfont notes: $(ls "$ASSETS/soundfont/acoustic_grand_piano-mp3" | wc -l) files"
+
       - name: Build debug APK
         uses: gradle/actions/setup-gradle@v4
         with:

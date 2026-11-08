@@ -52,6 +52,11 @@ class MainActivity : AppCompatActivity() {
             mediaPlaybackRequiresUserGesture = false // let click-to-play work
             allowFileAccess = true
             allowContentAccess = true
+            // Let the page XHR-load the bundled soundfont notes (file:// → file://)
+            @Suppress("DEPRECATION")
+            allowFileAccessFromFileURLs = true
+            @Suppress("DEPRECATION")
+            allowUniversalAccessFromFileURLs = true
         }
 
         // Pass WebView microphone requests through to the Android runtime permission.
@@ -162,6 +167,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun extFor(mime: String): String = when {
+        mime.contains("mpeg") || mime.contains("mp3") -> ".mp3"
         mime.contains("midi") || mime.contains("mid") -> ".mid"
         mime.contains("wav")  -> ".wav"
         mime.contains("abc")  -> ".abc"
