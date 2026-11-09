@@ -199,8 +199,6 @@ button{font-family:inherit}
           <option value="pairs" data-i18n="m.group.pairs">Paarweise (1+2, 3+4)</option>
           <option value="sa" data-i18n="m.group.sa">1+2 zusammen, Rest einzeln</option>
         </select></div>
-      <div class="mrow"><label><input type="checkbox" id="fLyrics" style="width:auto;margin-right:6px"><span data-i18n="m.lyrics">Liedtext anzeigen</span></label></div>
-      <div id="lyricEditors"></div>
       <div id="voiceEditors"></div>
       <h3 data-i18n="m.mic">Mikrofon (Singen → Noten)</h3>
       <div class="mrow"><label data-i18n="m.range">Stimmlage</label>
@@ -419,40 +417,41 @@ function parseKey(s){
   const m=(s||'').match(/^([A-G])(#|b)?(m)?/i); if(!m) return {letter:'C',acc:0,mode:'maj'};
   return {letter:m[1].toUpperCase(), acc:m[2]==='#'?1:m[2]==='b'?-1:0, mode:m[3]?'min':'maj'};
 }
-// tokenize one ABC body string into tokens, using the current key signature `sig`
-function parseBody(body, sig){
-  const toks=[]; const lines=body.split('\n');
-  lines.forEach((line,li)=>{
-    if(li>0) toks.push({t:'',kind:'newline'});
-    let i=0; const s=line;
-    while(i<s.length){
-      const c=s[i];
-      if(c===' '||c==='\t'){ i++; continue; }
-      if(c==='x'||c==='X'){ // placeholder rest – skip with its length
-        i++; while(i<s.length&&/[0-9\/]/.test(s[i]))i++; continue;
-      }
-      // bar / repeat
-      if(c==='|'||c===':'){ let bar=''; while(i<s.length&&/[|:\]\[]/.test(s[i])){bar+=s[i];i++;} if(bar) toks.push({t:bar,kind:'bar'}); continue; }
-      // rest
-      if(c==='z'||c==='Z'){ i++; let suf=''; while(i<s.length&&/[0-9\/]/.test(s[i])){suf+=s[i];i++;} toks.push({t:'z'+suf,kind:'rest',dur:parseLen(suf)}); continue; }
-      // note: optional accidental, letter, octave marks, length
-      const nm=s.slice(i).match(/^(\^\^|__|\^|_|=)?([A-Ga-g])([,']*)([0-9]*\/*[0-9]*)/);
-      if(nm){
-        const accCh=nm[1]||'', L=nm[2], oct=nm[3]||'', suf=nm[4]||'';
-        const letter=L.toUpperCase();
-        let acc = accCh==='^'?1:accCh==='_'?-1:accCh==='='?0:accCh==='^^'?2:accCh==='__'?-2: (sig[letter]!==undefined?sig[letter]:0);
-        let o = (L===L.toLowerCase())?5:4;
-        for(const ch of oct){ if(ch===',')o--; else if(ch==="'")o++; }
-        const midi = 12*(o+1) + NAT[letter] + acc;
-        toks.push({t:accCh+L+oct+suf, kind:'note', midi, dur:parseLen(suf)});
-        i+=nm[0].length; continue;
-      }
-      i++; // skip unknown char
+/* ================= ABC document model (lossless) =================
+   The loaded ABC text is kept as a document: header lines, a body layout (order of all body
+   lines) and one token list per voice. Everything the editor does not edit itself – lyrics (w:),
+   decorations, slurs, ties, chords, comments, blank lines, stem= …, even the spaces between
+   notes – is kept verbatim. Emitting an unchanged document gives back exactly the loaded text. */
+// tokenize one music line into `toks` (each token remembers the whitespace before it in .sep);
+// returns trailing whitespace of the line
+function tokenizeLine(s, sig, toks){
+  let i=0, pend='';
+  const push=tk=>{ tk.sep=pend; pend=''; toks.push(tk); };
+  const raw=len=>{ push({t:s.substr(i,len),kind:'raw'}); i+=len; };
+  while(i<s.length){
+    const c=s[i], rest=s.slice(i); let m;
+    if(c===' '||c==='\t'){ pend+=c; i++; continue; }
+    if(c==='%'){ raw(s.length-i); continue; }                                              // comment
+    if(c==='"'){ const e=s.indexOf('"',i+1); raw(e<0?s.length-i:e-i+1); continue; }        // "Am" / "^text"
+    if(c==='!'){ const e=s.indexOf('!',i+1); raw(e<0?1:e-i+1); continue; }                 // !decoration!
+    if(c==='{'){ const e=s.indexOf('}',i+1); raw(e<0?s.length-i:e-i+1); continue; }        // {grace}
+    if((m=rest.match(/^\[[A-Za-z]:[^\]]*\]?/))){ raw(m[0].length); continue; }             // [K:…] inline field
+    if((m=rest.match(/^(?:\[\||\|\]|:*\|+:*|::+)(?:\[?[0-9]+(?:[,-][0-9]+)*)?/))){ push({t:m[0],kind:'bar'}); i+=m[0].length; continue; }
+    if((m=rest.match(/^\[[0-9]+(?:[,-][0-9]+)*/))){ raw(m[0].length); continue; }          // [1 ending
+    if(c==='['){ const e=s.indexOf(']',i+1); let len=e<0?s.length-i:e-i+1;                  // [CEG] chord (+length)
+      const sm=s.slice(i+len).match(/^[0-9]*\/*[0-9]*/); raw(len+(sm?sm[0].length:0)); continue; }
+    if((m=rest.match(/^\([0-9](?::[0-9]*){0,2}/))){ raw(m[0].length); continue; }          // (3 tuplet
+    if(c==='z'){ m=rest.match(/^z([0-9]*\/*[0-9]*)/); push({t:m[0],kind:'rest',dur:parseLen(m[1])}); i+=m[0].length; continue; }
+    if(c==='x'||c==='X'||c==='Z'){ m=rest.match(/^[xXZ][0-9]*\/*[0-9]*/); raw(m[0].length); continue; }
+    if((m=rest.match(/^(\^\^|__|\^|_|=)?([A-Ga-g])([,']*)([0-9]*\/*[0-9]*)/))){
+      const accCh=m[1]||'', L=m[2], oct=m[3]||'', suf=m[4]||'', letter=L.toUpperCase();
+      const acc = accCh==='^'?1:accCh==='_'?-1:accCh==='='?0:accCh==='^^'?2:accCh==='__'?-2:(sig[letter]!==undefined?sig[letter]:0);
+      let o=(L===L.toLowerCase())?5:4; for(const ch of oct){ if(ch===',')o--; else if(ch==="'")o++; }
+      push({t:m[0],kind:'note',midi:12*(o+1)+NAT[letter]+acc,dur:parseLen(suf)}); i+=m[0].length; continue;
     }
-  });
-  // drop a trailing empty newline
-  while(toks.length && toks[toks.length-1].kind==='newline') toks.pop();
-  return toks;
+    raw(1);                                                                                  // ( ) - . ~ > < y H … etc.
+  }
+  return pend;
 }
 // set a <select> value; a value missing from the list is added as an extra option (so nothing is lost)
 function setSel(id,val){
@@ -460,65 +459,106 @@ function setSel(id,val){
   if(val && ![...s.options].some(o=>o.value===val)){ const o=document.createElement('option'); o.value=val; o.textContent=val; s.appendChild(o); }
   s.value=val;
 }
-// parse a full ABC string back into state; returns true on success
+// V: line attribute helpers (only touch the attribute that changed)
+function setVAttr(raw,key,val){ const re=new RegExp('\\b'+key+'=\\S+'); return re.test(raw)? raw.replace(re,key+'='+val) : raw+' '+key+'='+val; }
+function setVName(raw,name){ const q='name="'+name.replace(/"/g,'')+'"'; return /\bname=("[^"]*"|\S+)/.test(raw)? raw.replace(/\bname=("[^"]*"|\S+)/,q) : raw+' '+q; }
+function vAttr(raw,key){ const m=raw.match(new RegExp('\\b'+key+'=("[^"]*"|\\S+)')); return m? m[1].replace(/^"|"$/g,'') : ''; }
+const DEFAULT_ABC='X:1\nT:Mein Lied\nM:4/4\nL:1/4\nQ:120\nK:C';
+// parse a full ABC string into the document model; returns true on success
 function loadAbc(abc){
   try{
-    const km=abc.match(/^K:\s*(\S+)/m); state.key = km?parseKey(km[1]):{letter:'C',acc:0,mode:'maj'};
+    const lines=abc.replace(/\r\n?/g,'\n').split('\n');
+    // ---- header: everything up to and including the first K: line
+    let kIdx=lines.findIndex(l=>/^K:/.test(l)), headEnd;
+    if(kIdx>=0) headEnd=kIdx+1; else { headEnd=0; while(headEnd<lines.length && /^([A-Za-z]:|%)/.test(lines[headEnd])) headEnd++; }
+    const head=lines.slice(0,headEnd).map(raw=>{
+      const fm=raw.match(/^([A-Za-z]):/);
+      return {k: /^%%(score|staves)\b/.test(raw)?'score' : fm?fm[1]:'other', raw};
+    });
+    const seen={}; head.forEach(e=>{ if(['T','C','M','L','Q','K','score'].includes(e.k)){ if(seen[e.k]) e.k='other'; seen[e.k]=true; } });
+    const hv=k=>{ const e=head.find(x=>x.k===k); return e? e.raw.replace(/^[A-Za-z]:\s*/,'').trim() : null; };
+    const fileT=hv('T'), fileC=hv('C'), fileM=hv('M'), fileL=hv('L'), fileK=hv('K');
+    const qRaw=hv('Q'), fileQ=qRaw!=null? ((qRaw.match(/=\s*(\d+)/)||qRaw.match(/^\s*(\d+)/)||[])[1]||'') : null;
+    $('fTitle').value = fileT!=null? fileT : 'Mein Lied';
+    $('fComposer').value = fileC||'';
+    setSel('fMeter', fileM||''); setSel('fTempo', fileQ||'');
+    state.unitLen = fileL||''; setSel('fUnit', state.unitLen);
+    state.key = fileK!=null? parseKey(fileK) : {letter:'C',acc:0,mode:'maj'};
     KM=keyMap(state.key);
-    const tm=abc.match(/^T:(.*)$/m); $('fTitle').value=tm?tm[1].trim():'Mein Lied';
-    const cm=abc.match(/^C:(.*)$/m); $('fComposer').value=cm?cm[1].trim():'';
-    const mm=abc.match(/^M:(.*)$/m); setSel('fMeter', mm?mm[1].trim():'');
-    const qm=abc.match(/^Q:(?:[^=\n]*=)?(\d+)/m); setSel('fTempo', qm?qm[1]:'');
-    const lm=abc.match(/^L:\s*(\S+)/m); state.unitLen=lm?lm[1].trim():''; setSel('fUnit', state.unitLen);
-    const multi = /^%%score|^%%staves|^V:/m.test(abc);
-    // reset voices
-    state.voices=[newVoice(VOICE_DEFS[0]),newVoice(VOICE_DEFS[1]),newVoice(VOICE_DEFS[2]),newVoice(VOICE_DEFS[3])];
-    const idIndex={S:0,A:1,T:2,B:3,'1':0,'2':1,'3':2,'4':3};
-    let foundLyric=false;
-    if(multi){
-      const lines=abc.split('\n'); let cur=-1, bodies=['','','',''];
-      const vdef=/^V:\s*(\S+)(.*)$/;
-      for(const line of lines){
-        if(/^w:/.test(line)){ if(cur>=0){ state.voices[cur].lyrics=line.replace(/^w:\s?/,''); foundLyric=true; } continue; }
-        if(/^[A-Za-z]:/.test(line) && !/^V:/.test(line)) continue;      // other header
-        if(line.startsWith('%')) continue;
-        const vm=line.match(vdef);
-        if(vm){ cur=idIndex[vm[1]]!==undefined?idIndex[vm[1]]:-1;
-          if(cur>=0){ const cl=(vm[2].match(/clef=(\w+)/)||[])[1]; if(cl)state.voices[cur].clef=cl;
-            const nn=(vm[2].match(/name="([^"]*)"/)||[])[1]; if(nn)state.voices[cur].name=nn; }
-          continue; }
-        // inline [V:x] prefix
-        const inl=line.match(/^\[V:\s*(\S+?)\]\s*(.*)$/);
-        if(inl){ const vi=idIndex[inl[1]]; if(vi!==undefined){ cur=vi; bodies[vi]+=(bodies[vi]?'\n':'')+inl[2]; } continue; }
-        if(cur>=0){ bodies[cur]+=(bodies[cur]?'\n':'')+line; }
+    // ---- voices (max. 4 are editable; further voices stay as untouched text)
+    state.voices=[0,1,2,3].map(i=>{ const v=newVoice(VOICE_DEFS[i]); v.id=null; v.name=''; v.clef='treble'; v.defEntry=null; v.rows=0; return v; });
+    const ids=[];
+    const vIndex=id=>{ let k=ids.indexOf(id); if(k<0){ if(ids.length>=4) return -1; ids.push(id); k=ids.length-1; state.voices[k].id=id; } return k; };
+    const applyDef=(vi,e)=>{ const v=state.voices[vi]; if(v.defEntry) return; v.defEntry=e;
+      const rest=e.raw.replace(/^\[?V:\s*\S+/,''); const cl=vAttr(rest,'clef'), nm=vAttr(rest,'name');
+      if(cl) v.clef=cl; if(nm) v.name=nm; };
+    head.forEach(e=>{ if(e.k==='V'){ const m=e.raw.match(/^V:\s*(\S+)/); if(m){ const vi=vIndex(m[1]); if(vi>=0){ e.v=vi; applyDef(vi,e); } } } });
+    // ---- body: layout of lines + rows per voice
+    const layout=[]; const body=lines.slice(headEnd);
+    const multiDoc = ids.length>0 || body.some(l=>/^V:|^\[V:/.test(l));
+    let cur = multiDoc? -1 : 0;           // -1: no voice yet, -2: unmanaged voice (>4)
+    const addRow=(vi,text,prefix,isLine)=>{
+      const v=state.voices[vi], last=layout[layout.length-1];
+      const newSeg=!(last && last.type==='seg' && last.v===vi && prefix==='');
+      if(newSeg) layout.push({type:'seg',v:vi,prefix});
+      if(v.rows>0) v.tokens.push({t:'',kind:'newline',sep:'',segBreak:newSeg});
+      v.rows++;
+      if(isLine){ v.tokens.push({t:text,kind:'line',sep:''}); return; }
+      const tail=tokenizeLine(text,KM.sig,v.tokens);
+      if(tail) v.tokens.push({t:'',kind:'raw',sep:tail});
+    };
+    for(let bi=0; bi<body.length; bi++){
+      const line=body[bi]; let m;
+      if(/^\s*$/.test(line)){
+        // In ABC an empty line ENDS the tune – abcjs would show only the part before it.
+        // Inside the tune it becomes an empty comment line "%" (keeps the visual grouping, shows everything).
+        let j=bi+1; while(j<body.length && /^\s*$/.test(body[j])) j++;
+        layout.push({type:'raw', raw:(j<body.length && !/^X:/.test(body[j]))? '%' : line}); continue;
       }
-      let n=0;
-      for(let vi=0;vi<4;vi++){ if(bodies[vi].trim()){ state.voices[vi].tokens=parseBody(bodies[vi],KM.sig); n=Math.max(n,vi+1); } }
-      state.voiceMode='multi'; state.voiceCount=Math.max(2,Math.min(4,n)); state.activeVoice=0;
-      // detect staff grouping from the %%score/%%staves spec
-      const sp=(abc.match(/^%%(?:score|staves)\s+(.*)$/m)||[])[1]||'';
-      state.grouping = /\([^)]*\s[^)]*\)/.test(sp) ? (/\)\s*\(/.test(sp)?'pairs':'sa') : 'single';
-      $('fVoiceMode').value='multi'; $('fVoiceCount').value=String(state.voiceCount); $('fGroup').value=state.grouping;
-    } else {
-      // single: body = lines after K: that aren't headers
-      const lines=abc.split('\n'); let started=false, body='';
-      for(const line of lines){
-        if(/^K:/.test(line)){ started=true; continue; }
-        if(!started) continue;
-        if(/^w:/.test(line)){ state.voices[0].lyrics=line.replace(/^w:\s?/,''); foundLyric=true; continue; }
-        if(/^[A-Za-z]:/.test(line)||line.startsWith('%')) continue;
-        body+=(body?'\n':'')+line;
-      }
-      const cl=(abc.match(/^K:[^\n]*clef=(\w+)/m)||[])[1]; if(cl){ state.voices[0].clef=cl; $('fClef').value=cl; }
-      state.voices[0].tokens=parseBody(body,KM.sig);
-      state.voiceMode='single'; state.activeVoice=0; $('fVoiceMode').value='single';
+      if(/^%/.test(line)){ layout.push({type:'raw',raw:line}); continue; }
+      if((m=line.match(/^V:\s*(\S+)/))){ const vi=vIndex(m[1]); const e={type:'vline',v:vi,raw:line}; layout.push(e);
+        if(vi>=0){ applyDef(vi,e); cur=vi; } else cur=-2; continue; }
+      if((m=line.match(/^\[V:\s*(\S+?)\]/))){ const vi=vIndex(m[1]);
+        if(vi<0){ layout.push({type:'raw',raw:line}); cur=-2; continue; }
+        cur=vi; addRow(vi,line.slice(m[0].length),m[0],false); continue; }
+      if(/^w:/.test(line)){ if(cur>=0) addRow(cur,line,'',true); else layout.push({type:'raw',raw:line}); continue; }
+      if(/^[A-Za-z]:/.test(line)){ layout.push({type:'raw',raw:line}); continue; }
+      if(cur>=0) addRow(cur,line,'',false); else layout.push({type:'raw',raw:line});
     }
-    if(foundLyric){ state.lyricsOn=true; $('fLyrics').checked=true; }
+    // ---- voice mode
+    const nDecl=ids.length;
+    if(multiDoc && nDecl>=2){ state.voiceMode='multi'; state.voiceCount=Math.min(4,nDecl); }
+    else { state.voiceMode='single'; state.voiceCount=Math.max(2,state.voiceCount||2); if(!state.voices[0].id && multiDoc) state.voices[0].id=ids[0]||null; }
+    const nAct=state.voiceMode==='single'?1:state.voiceCount;
+    // empty-voice placeholder "x8|" written by this editor counts as empty
+    state.voices.forEach(v=>{ const txt=v.tokens.map(t=>t.sep+t.t).join('').trim(); if(v.rows<=1 && txt==='x8|') v.tokens=[]; });
+    // every active voice needs a place in the layout (e.g. a new song, or a voice declared without notes)
+    let tailStart=layout.length; while(tailStart>0 && layout[tailStart-1].type==='raw') tailStart--;
+    for(let vi=0; vi<nAct; vi++){
+      if(layout.some(e=>e.type==='seg'&&e.v===vi)) continue;
+      const v=state.voices[vi];
+      let at=-1; layout.forEach((e,ix)=>{ if(e.type==='vline'&&e.v===vi) at=ix; });
+      if(at>=0){ layout.splice(at+1,0,{type:'seg',v:vi,prefix:''}); if(at+1<tailStart) tailStart++; continue; }
+      if(state.voiceMode==='multi'){ if(!v.id) v.id=VOICE_DEFS[vi].id; layout.splice(tailStart,0,{type:'vline',v:vi,raw:'V:'+v.id,gen:true},{type:'seg',v:vi,prefix:''}); tailStart+=2; }
+      else { layout.splice(tailStart,0,{type:'seg',v:vi,prefix:''}); tailStart++; }
+    }
+    // single voice without V: line: clef lives in the K: line
+    if(!state.voices[0].defEntry){ const kc=fileK!=null? vAttr(fileK,'clef') : ''; state.voices[0].clef=kc||'treble'; $('fClef').value=state.voices[0].clef; }
+    state.voices.forEach(v=>{ v.loadedName=v.name; v.loadedClef=v.clef; v.cursor=v.tokens.length; v.sel=-1; });
+    // staff grouping from %%score / %%staves
+    const sp=(head.find(e=>e.k==='score')||{raw:''}).raw.replace(/^%%(score|staves)\s*/,'');
+    let g = /\([^)]*\s[^)]*\)/.test(sp) ? (/\)\s*\(/.test(sp)?'pairs':'sa') : (sp?'single':state.grouping);
+    if(sp){ const norm=x=>x.replace(/\s+/g,' ').trim(), prev=state.grouping;   // prefer the current choice if it gives the same line
+      for(const cand of [prev,'pairs','sa','single']){ state.grouping=cand; if(norm(scoreSpec(nAct))===norm(sp)){ g=cand; break; } } }
+    state.grouping=g;
+    state.doc={head,layout,loaded:{T:fileT,C:fileC,M:fileM,L:fileL,Q:fileQ,key:keyAbc(state.key),clef0:state.voices[0].clef,grouping:state.grouping}};
+    state.activeVoice=0;
+    $('fVoiceMode').value=state.voiceMode; $('fVoiceCount').value=String(state.voiceCount); $('fGroup').value=state.grouping;
     setKeyBtn();
     $('voiceCountRow').hidden=(state.voiceMode!=='multi');
     $('groupRow').hidden=(state.voiceMode!=='multi');
     $('clefRow').hidden=(state.voiceMode==='multi');
-    buildVoicebar(); buildVoiceEditors(); buildLyricEditors(); buildKeyboard(); scrollToRoot(); render(true);
+    buildVoicebar(); buildVoiceEditors(); buildKeyboard(); scrollToRoot(); render(true);
     return true;
   }catch(e){ console.warn('loadAbc',e); return false; }
 }
@@ -531,7 +571,7 @@ const VOICE_DEFS=[
   {id:'B',name:'Bass',  clef:'bass',  lo:40,hi:64},
 ];
 const VOICE_COLORS=['#185FA5','#C94F00','#1E5C0A','#7A4AC0'];
-function newVoice(def){ return {name:def.name,clef:def.clef,lo:def.lo,hi:def.hi,tokens:[],cursor:0,sel:-1,lyrics:''}; }
+function newVoice(def){ return {id:def.id,name:def.name,clef:def.clef,lo:def.lo,hi:def.hi,tokens:[],cursor:0,sel:-1,rows:0,defEntry:null,loadedName:def.name,loadedClef:def.clef}; }
 
 /* ================= state ================= */
 const state={
@@ -542,8 +582,9 @@ const state={
   voiceCount:2,          // voices used in multi mode (2..4)
   activeVoice:0,         // 0-based index into voices
   grouping:'pairs',      // 'single' | 'pairs' | 'sa'  (staff bundling in multi)
-  lyricsOn:false,        // show w: lyrics lines
   transpose:0,           // view-only visualTranspose (semitones)
+  doc:null,              // loaded ABC document (header, layout) – see loadAbc
+  stash:[],              // notes of voices switched off (kept so switching back restores them)
   voices:[newVoice(VOICE_DEFS[0]),newVoice(VOICE_DEFS[1]),newVoice(VOICE_DEFS[2]),newVoice(VOICE_DEFS[3])],
 };
 function AV(){ return state.voices[state.activeVoice]; }
@@ -618,10 +659,25 @@ function durSuffix(mult){ return fracSuffix(mult); }
 function noteStr(midi,mult){ const pc=((midi%12)+12)%12, info=KM.map[pc]; return abcToken(info.letter,info.acc,KM.sig,midi)+durSuffix(mult); }
 function restStr(mult){ return 'z'+durSuffix(mult); }
 function lenSuffix(){ return durSuffix(LEN_Q[state.len]||1); }
+// insert position for music: never inside a text row (w: …) – step back to the end of the music row before it
+function musicPos(v,i){
+  for(let g=0; g<10000; g++){
+    const prev=v.tokens[i-1], next=v.tokens[i];
+    if(prev && prev.kind==='line'){ i--; continue; }
+    if((i===0 || (prev && prev.kind==='newline')) && next && next.kind==='line' && i>0){ i--; continue; }
+    break;
+  }
+  return i;
+}
+function insertToken(tk){
+  const v=AV(); const i=musicPos(v,v.cursor);
+  v.tokens.splice(i,0,tk); v.cursor=i+1;
+  return i;
+}
 function insertNote(midi){
   const v=AV(); const dur=LEN_Q[state.len]||1;
-  v.tokens.splice(v.cursor,0,{t:noteStr(midi,dur),kind:'note',midi,dur});
-  v.cursor++; v.sel=v.cursor-1;
+  const i=insertToken({t:noteStr(midi,dur),kind:'note',midi,dur});
+  v.sel=i;
   playMidi(midi); render(true);
 }
 // recompute all note/rest tokens' abc text (keeps each length multiple)
@@ -633,12 +689,17 @@ function resyncTokens(){
 }
 function insertRaw(s,kind){
   const v=AV();
-  v.tokens.splice(v.cursor,0,{t:s,kind:kind||'sym'});
-  v.cursor++; v.sel=-1; render(true);
+  insertToken({t:s,kind:kind||'sym'});
+  v.sel=-1; render(true);
 }
 function delAtCursor(){
-  const v=AV();
-  if(v.cursor>0){ v.tokens.splice(v.cursor-1,1); v.cursor--; }
+  const v=AV(); let i=musicPos(v,v.cursor);
+  const prev=v.tokens[i-1];
+  // keep row boundaries that carry a text row (w:) or a voice change – only move back into the music row
+  if(prev && prev.kind==='newline' && (prev.segBreak || (v.tokens[i-2] && v.tokens[i-2].kind==='line') || (v.tokens[i] && v.tokens[i].kind==='line'))){
+    v.cursor=musicPos(v,i-1); v.sel=-1; render(true); return;
+  }
+  if(i>0){ v.tokens.splice(i-1,1); v.cursor=i-1; } else v.cursor=0;
   v.sel=-1; render(true);
 }
 // move a note's pitch by diatonic steps within the current scale
@@ -658,52 +719,82 @@ function changePitch(vIdx, idx, step){
 /* ================= render ================= */
 // lastMap: absolute char ranges across the whole ABC string -> {v,i,kind}
 let lastMap=[];
-function buildVoiceBody(v){
-  let str=''; const ranges=[];
-  v.tokens.forEach((tk,i)=>{
-    if(i>0) str+=(tk.kind==='newline'?'':' ');
-    const start=str.length;
-    str+=(tk.kind==='newline'?'\n':tk.t);
-    ranges.push({i,start,end:str.length,kind:tk.kind});
-  });
-  if(!str) str='x8|';   // placeholder bar so empty voice still renders a staff
-  return {str,ranges};
-}
-function fullAbc(){
-  let h='X:1\n';
-  h+='T:'+($('fTitle').value||'Mein Lied')+'\n';
-  if($('fComposer').value) h+='C:'+$('fComposer').value+'\n';
-  if($('fMeter').value) h+='M:'+$('fMeter').value+'\n';
-  if(state.unitLen) h+='L:'+state.unitLen+'\n';
-  if($('fTempo').value) h+='Q:'+$('fTempo').value+'\n';
-  lastMap=[];
-  const n=nActive();
-  let out;
-  if(n===1){
-    const v=state.voices[0];
-    h+='K:'+keyAbc(state.key)+' clef='+v.clef+'\n';
-    const bb=buildVoiceBody(v);
-    bb.ranges.forEach(r=>lastMap.push({v:0,i:r.i,start:h.length+r.start,end:h.length+r.end,kind:r.kind}));
-    out=h+bb.str;
-    if(state.lyricsOn && v.lyrics.trim()) out+='\nw: '+v.lyrics.trim();
-  } else {
-    h+='%%score '+scoreSpec(n)+'\n';
-    h+='K:'+keyAbc(state.key)+'\n';
-    out=h;
-    for(let vi=0; vi<n; vi++){
-      const v=state.voices[vi], def=VOICE_DEFS[vi];
-      out+='V:'+def.id+' clef='+v.clef+' name="'+(v.name||def.name).replace(/"/g,'')+'"\n';
-      const bb=buildVoiceBody(v);
-      bb.ranges.forEach(r=>lastMap.push({v:vi,i:r.i,start:out.length+r.start,end:out.length+r.end,kind:r.kind}));
-      out+=bb.str+'\n';
-      if(state.lyricsOn && v.lyrics.trim()) out+='w: '+v.lyrics.trim()+'\n';
-    }
+// header lines of the document, with only the changed fields rewritten
+function emitHead(opts){
+  opts=opts||{};
+  const d=state.doc, L=d.loaded, out=[], present={};
+  const cur={T:$('fTitle').value||'Mein Lied', C:$('fComposer').value, M:$('fMeter').value, L:state.unitLen||'', Q:$('fTempo').value};
+  const managed=['T','C','M','L','Q'];
+  const changed=k=> (cur[k]||'')!==(L[k]==null?'':L[k]) || (k==='T' && L.T==null);
+  const insertNew=()=>{   // fields that were not in the file but are set now – old order T C M L Q, before K:
+    managed.forEach(k=>{ if(!present[k] && cur[k] && changed(k)) out.push(k+':'+cur[k]); present[k]=true; });
+    if(opts.skipV) return;
+    for(let vi=0; vi<nActive(); vi++){ const v=state.voices[vi];
+      if(state.voiceMode==='multi' && !v.defEntry && (v.name!==v.loadedName || v.clef!==v.loadedClef))
+        out.push('V:'+v.id+' clef='+v.clef+(v.name?' name="'+v.name.replace(/"/g,'')+'"':'')); }
+  };
+  for(const e of d.head){
+    if(managed.includes(e.k)){ present[e.k]=true; if(!changed(e.k)) out.push(e.raw); else if(cur[e.k]) out.push(e.k+':'+cur[e.k]); continue; }
+    if(e.k==='K'){ insertNew(); if(!opts.skipK) out.push(kLine(e.raw)); continue; }
+    if(e.k==='score'){ if(opts.skipScore) continue; out.push(state.voiceMode==='multi' && state.grouping!==L.grouping ? '%%score '+scoreSpec(nActive()) : e.raw); continue; }
+    if(e.k==='V' && e.v!=null){ if(opts.skipV) continue; out.push(vLine(e)); continue; }
+    out.push(e.raw);
   }
+  if(!d.head.some(e=>e.k==='K')){ insertNew(); if(!opts.skipK && keyAbc(state.key)!==L.key) out.push('K:'+keyAbc(state.key)); }
+  return out;
+}
+function kLine(raw){
+  const v0=state.voices[0];
+  const keyCh=keyAbc(state.key)!==state.doc.loaded.key;
+  const clefCh=!v0.defEntry && state.voiceMode==='single' && v0.clef!==state.doc.loaded.clef0;
+  if(!keyCh && !clefCh) return raw;
+  let r=raw; if(keyCh) r=r.replace(/^K:\s*\S*/,'K:'+keyAbc(state.key));
+  if(clefCh) r=setVAttr(r,'clef',v0.clef);
+  return r;
+}
+function vLine(e){
+  const v=state.voices[e.v];
+  if(!v || v.defEntry!==e || (v.name===v.loadedName && v.clef===v.loadedClef)) return e.raw;
+  let r=e.raw; if(v.clef!==v.loadedClef) r=setVAttr(r,'clef',v.clef); if(v.name!==v.loadedName) r=setVName(r,v.name);
+  return r;
+}
+// whole document as ABC text; records the char position of every token in lastMap (used by note clicks)
+function fullAbc(){
+  const d=state.doc; lastMap=[];
+  if(!d) return $('abcTa').value||'';
+  let out=emitHead().join('\n');
+  const ptr=[0,0,0,0], started=[false,false,false,false];
+  const lastSegIx=[-1,-1,-1,-1]; d.layout.forEach((e,ix)=>{ if(e.type==='seg') lastSegIx[e.v]=ix; });
+  d.layout.forEach((e,ix)=>{
+    out+='\n';
+    if(e.type==='raw'){ out+=e.raw; return; }
+    if(e.type==='vline'){ out+= e.v>=0? vLine(e) : e.raw; return; }
+    const vi=e.v, v=state.voices[vi];
+    out+=e.prefix;
+    if(!v.tokens.length){ if(!started[vi]) out+='x8|'; started[vi]=true; return; }   // empty voice still shows a staff
+    started[vi]=true;
+    let i=ptr[vi];
+    if(i>0 && v.tokens[i] && v.tokens[i].kind==='newline' && v.tokens[i].segBreak) i++;  // boundary to previous part
+    let rowStart=true;
+    for(; i<v.tokens.length; i++){
+      const tk=v.tokens[i];
+      if(tk.kind==='newline'){
+        if(tk.segBreak && ix!==lastSegIx[vi]) break;                 // rest belongs to the next part of this voice
+        out+=(tk.sep||'')+'\n'; rowStart=true; continue;
+      }
+      const sep = tk.sep!==undefined? tk.sep : (rowStart?'':' ');
+      const start=out.length+sep.length;
+      out+=sep+tk.t;
+      lastMap.push({v:vi,i,start,end:out.length,kind:tk.kind});
+      rowStart=false;
+    }
+    ptr[vi]=i;
+  });
   return out;
 }
 // staff bundling: braces group the choir, parens share a staff
 function scoreSpec(n){
-  const id=i=>VOICE_DEFS[i].id;
+  const id=i=>state.voices[i].id||VOICE_DEFS[i].id;
   if(state.grouping==='single'){ const a=[]; for(let i=0;i<n;i++)a.push(id(i)); return '{'+a.join(' ')+'}'; }
   if(state.grouping==='sa'){ // 1+2 on one staff, rest single
     let p='('+id(0)+(n>1?' '+id(1):'')+')'; for(let i=2;i<n;i++)p+=' '+id(i); return '{'+p+'}';
@@ -733,6 +824,9 @@ function render(fromButtons){
 }
 function locAtChar(startChar){
   for(const r of lastMap){ if(startChar>=r.start && startChar<r.end) return r; }
+  // abcjs may count the space(s) before a note as part of it (e.g. "[V:1] E2"): take the token right after
+  const src=$('abcTa').value;
+  for(const r of lastMap){ if(r.start>startChar && /^\s+$/.test(src.slice(startChar,r.start))) return r; }
   return null;
 }
 function onNoteClick(abcElem, tn, classes, analysis, drag, ev){
@@ -804,28 +898,48 @@ function buildVoiceEditors(){
     state.voices[+sel.dataset.vc].clef=sel.value; render(true);
   });
 }
-function buildLyricEditors(){
-  const box=$('lyricEditors'); box.innerHTML='';
-  if(!state.lyricsOn){ return; }
-  const n=nActive();
-  for(let vi=0; vi<n; vi++){
-    const v=state.voices[vi];
-    const wrap=document.createElement('div'); wrap.className='mrow';
-    const lab = n>1 ? (t('m.lyrics')+' – '+(v.name||VOICE_DEFS[vi].name)) : t('m.lyrics');
-    wrap.innerHTML='<label style="color:'+(n>1?VOICE_COLORS[vi]:'var(--text2)')+'">'+lab+'</label>'+
-      '<input data-ly="'+vi+'" value="'+(v.lyrics||'').replace(/"/g,'&quot;')+'" placeholder="Sil-be Sil-be ...">';
-    box.appendChild(wrap);
+// text of a voice's rows (exact, incl. w: rows), used when the structure is rebuilt
+function voiceText(v){
+  let s='', rowStart=true;
+  v.tokens.forEach(tk=>{
+    if(tk.kind==='newline'){ s+=(tk.sep||'')+'\n'; rowStart=true; return; }
+    s+=(tk.sep!==undefined? tk.sep : (rowStart?'':' '))+tk.t; rowStart=false;
+  });
+  return s;
+}
+// structure change (single/multi, number of voices): rebuild the document from the current state.
+// Header lines, notes, lyrics and W:/%% lines are kept; voices switched off are stashed and come back.
+function restructure(mode,count){
+  const nNew = mode==='single'? 1 : count;
+  const nOld = nActive(), act=state.activeVoice;
+  const src=[0,1,2,3].map(vi=> vi<nOld ? state.voices[vi] : (state.stash[vi]||state.voices[vi]));
+  const used=new Set();
+  const ids=src.map((v,vi)=>{ let id=v.id||VOICE_DEFS[vi].id; if(used.has(id)) id=VOICE_DEFS[vi].id; used.add(id); return id; });
+  const lines=emitHead({skipV:true,skipScore:true,skipK:true});
+  if(mode==='multi'){
+    const keep=state.grouping; for(let vi=0;vi<4;vi++) state.voices[vi].id=ids[vi];
+    lines.push('%%score '+scoreSpec(nNew)); state.grouping=keep;
   }
-  box.querySelectorAll('[data-ly]').forEach(inp=>inp.oninput=()=>{ state.voices[+inp.dataset.ly].lyrics=inp.value; render(true); });
+  const kE=state.doc.head.find(e=>e.k==='K');
+  let k = kE? kLine(kE.raw) : 'K:'+keyAbc(state.key);
+  k=k.replace(/\s*\bclef=\S+/,'');
+  if(mode==='single' && src[0].clef && src[0].clef!=='treble') k=setVAttr(k,'clef',src[0].clef);
+  lines.push(k);
+  for(let vi=0; vi<nNew; vi++){
+    const v=src[vi];
+    if(mode==='multi') lines.push('V:'+ids[vi]+' clef='+(v.clef||VOICE_DEFS[vi].clef)+' name="'+(v.name||VOICE_DEFS[vi].name).replace(/"/g,'')+'"');
+    const txt=voiceText(v); if(txt) lines.push(txt);
+  }
+  state.doc.layout.forEach(e=>{ if(e.type==='raw' && /^(W:|%)/.test(e.raw)) lines.push(e.raw); });
+  // stash voices that are switched off
+  for(let vi=nNew; vi<4; vi++){ if(src[vi] && src[vi].tokens.length) state.stash[vi]=src[vi]; }
+  for(let vi=1; vi<nNew; vi++) delete state.stash[vi];
+  loadAbc(lines.join('\n'));
+  if(act<nActive()) setActiveVoice(act);
 }
 function setVoiceMode(mode){
-  state.voiceMode=mode;
-  $('voiceCountRow').hidden=(mode!=='multi');
-  $('groupRow').hidden=(mode!=='multi');
-  $('clefRow').hidden=(mode==='multi');
-  if(mode==='single'){ state.activeVoice=0; }
-  else if(state.activeVoice>=state.voiceCount){ state.activeVoice=0; }
-  buildVoicebar(); buildVoiceEditors(); buildLyricEditors(); setActiveVoice(state.activeVoice); render(true);
+  if(mode===state.voiceMode) return;
+  restructure(mode, state.voiceCount);
 }
 function keyLabel(){
   const f=KEYS.find(([n,k])=>k.letter===state.key.letter&&k.acc===state.key.acc&&k.mode===state.key.mode);
@@ -1006,20 +1120,15 @@ $('symPop').querySelectorAll('button').forEach(b=>b.onclick=()=>{
   else if(s==='repend') insertRaw(':|','bar');
   closePops();
 });
-$('pauseBtn').onclick=()=>{ const v=AV(), dur=LEN_Q[state.len]||1; v.tokens.splice(v.cursor,0,{t:restStr(dur),kind:'rest',dur}); v.cursor++; v.sel=-1; render(true); };
+$('pauseBtn').onclick=()=>{ const v=AV(), dur=LEN_Q[state.len]||1; insertToken({t:restStr(dur),kind:'rest',dur}); v.sel=-1; render(true); };
 $('barBtn').onclick=()=>insertRaw('|','bar');
 $('delBtn').onclick=delAtCursor;
 
 ['fTitle','fComposer','fMeter','fTempo'].forEach(id=>$(id).addEventListener('input',()=>render(true)));
 $('fClef').addEventListener('input',()=>{ state.voices[0].clef=$('fClef').value; render(true); });
 $('fVoiceMode').addEventListener('change',()=>setVoiceMode($('fVoiceMode').value));
-$('fVoiceCount').addEventListener('change',()=>{
-  state.voiceCount=parseInt($('fVoiceCount').value)||2;
-  if(state.activeVoice>=state.voiceCount) state.activeVoice=0;
-  buildVoicebar(); buildVoiceEditors(); buildLyricEditors(); setActiveVoice(state.activeVoice); render(true);
-});
+$('fVoiceCount').addEventListener('change',()=>{ restructure('multi', parseInt($('fVoiceCount').value)||2); });
 $('fGroup').addEventListener('change',()=>{ state.grouping=$('fGroup').value; render(true); });
-$('fLyrics').addEventListener('change',()=>{ state.lyricsOn=$('fLyrics').checked; buildLyricEditors(); render(true); });
 $('fTranspose').addEventListener('change',()=>{ state.transpose=parseInt($('fTranspose').value)||0; render(false); });
 $('fUnit').addEventListener('change',()=>{ state.unitLen=$('fUnit').value; render(true); });   // only L: changes, notes stay as written
 $('abcTa').addEventListener('input',()=>{ render(false); });
@@ -1180,8 +1289,7 @@ $('abcBtn').onclick=()=>setAbcPanel($('abcPanel').hidden);
 
 /* init */
 buildTemplates(); renderSaved();
-setKeyBtn();
-buildKeyboard(); scrollToRoot(); render(true);
+loadAbc(DEFAULT_ABC);          // new song goes through the same document model as any loaded ABC
 applyI18n();
 </script>
 </body></html>
