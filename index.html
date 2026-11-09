@@ -634,7 +634,7 @@ function onNoteClick(abcElem, tn, classes, analysis, drag, ev){
   if(!loc) return;
   const vo=state.voices[loc.v], tk=vo.tokens[loc.i];
   if(drag && drag.step && vo.sel>=0 && vo.tokens[vo.sel] && vo.tokens[vo.sel].kind==='note'){
-    changePitch(loc.v, vo.sel, drag.step); return;
+    changePitch(loc.v, vo.sel, -drag.step); return;   // abcjs: ziehen nach unten → tiefer
   }
   if(loc.v!==state.activeVoice && state.voiceMode==='multi'){ setActiveVoice(loc.v); }
   if(tk && tk.kind==='note'){ vo.sel=loc.i; vo.cursor=loc.i+1; playMidi(tk.midi); paintSelection(); }
