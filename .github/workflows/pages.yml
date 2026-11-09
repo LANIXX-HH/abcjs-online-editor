@@ -24,6 +24,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Stamp version (shown in the settings menu)
+        run: sed -i "s/__BUILD__/${GITHUB_SHA::7} · $(date -u +%d.%m.%Y)/" index.html
+
       - name: Upload site
         uses: actions/upload-pages-artifact@v3
         with:

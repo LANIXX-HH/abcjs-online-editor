@@ -41,6 +41,7 @@ jobs:
           set -e
           ASSETS=android/app/src/main/assets
           cp index.html "$ASSETS/index.html"
+          sed -i "s/__BUILD__/${GITHUB_SHA::7} · $(date -u +%d.%m.%Y)/" "$ASSETS/index.html"   # version shown in the menu
           curl -fsSL -o "$ASSETS/abcjs-basic-min.js" \
             https://cdn.jsdelivr.net/npm/abcjs@6.4.3/dist/abcjs-basic-min.js
           # MP3 encoder — only bundled in the app, so the web page stays lean

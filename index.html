@@ -172,7 +172,7 @@ button{font-family:inherit}
   <div class="body">
     <!-- MENU (left on desktop, drawer on mobile) -->
     <div class="menu" id="menu">
-      <div class="mhead"><b data-i18n="m.settings">Einstellungen</b>
+      <div class="mhead"><span><b data-i18n="m.settings">Einstellungen</b> <span class="k2" id="buildTag" style="display:inline;opacity:.6">__BUILD__</span></span>
         <span style="display:flex;gap:6px;align-items:center">
           <select id="langSel" style="width:auto;padding:3px 6px;font-size:12px"><option value="de">DE</option><option value="en">EN</option><option value="ru">RU</option></select>
           <button class="mx" id="menuClose">✕</button></span></div>
@@ -1441,6 +1441,7 @@ $('abcBtn').onclick=()=>setAbcPanel($('abcPanel').hidden);
 $('lyrBtn').onclick=()=>setLyricMode(!state.lyricMode);
 
 /* init */
+if($('buildTag').textContent.indexOf('__')===0) $('buildTag').textContent='lokal';   // not stamped by a pipeline
 buildTemplates(); renderSaved();
 loadAbc(DEFAULT_ABC);          // new song goes through the same document model as any loaded ABC
 applyI18n();
