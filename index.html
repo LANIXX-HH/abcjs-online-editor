@@ -125,6 +125,8 @@ button{font-family:inherit}
       <div class="mrow"><label data-i18n="m.meter">Taktart</label>
         <select id="fMeter"><option>4/4</option><option>3/4</option><option>2/4</option><option>6/8</option><option>C</option></select></div>
       <div class="mrow"><label data-i18n="m.tempo">Tempo (BPM)</label><input id="fTempo" type="number" value="100" min="20" max="240"></div>
+      <div class="mrow"><label data-i18n="m.unit">Einheitslänge (L:)</label>
+        <select id="fUnit"><option value="1/1">1/1</option><option value="1/2">1/2</option><option value="1/4" selected>1/4</option><option value="1/8">1/8</option><option value="1/16">1/16</option></select></div>
       <h3 data-i18n="m.voices">Stimmen</h3>
       <div class="mrow"><label data-i18n="m.mode">Modus</label>
         <select id="fVoiceMode"><option value="single" data-i18n="m.single">Einstimmig</option><option value="multi" data-i18n="m.multi">Mehrstimmig (SATB)</option></select></div>
@@ -226,7 +228,7 @@ const $=id=>document.getElementById(id);
 
 /* ================= i18n ================= */
 const I18N={
-  de:{'tb.menu':'☰ Menü','m.settings':'Einstellungen','m.song':'Lied','m.title':'Titel','m.composer':'Komponist','m.meter':'Taktart','m.tempo':'Tempo (BPM)',
+  de:{'tb.menu':'☰ Menü','m.settings':'Einstellungen','m.song':'Lied','m.title':'Titel','m.composer':'Komponist','m.meter':'Taktart','m.tempo':'Tempo (BPM)','m.unit':'Einheitslänge (L:)',
     'm.voices':'Stimmen','m.mode':'Modus','m.single':'Einstimmig','m.multi':'Mehrstimmig (SATB)','m.vcount':'Anzahl Stimmen',
     'm.group':'Bündelung der Systeme','m.group.single':'Jede Stimme einzeln','m.group.pairs':'Paarweise (1+2, 3+4)','m.group.sa':'1+2 zusammen, Rest einzeln',
     'm.lyrics':'Liedtext','m.transpose':'Transponieren (nur Ansicht)',
@@ -238,7 +240,7 @@ const I18N={
     'sym.newline':'⏎ Neue Zeile','sym.repstart':'|: Wdh. auf','sym.repend':':| Wdh. zu',
     'len.whole':'𝅝 Ganze','len.half':'𝅗𝅥 Halbe','len.quarter':'♩ Viertel','len.eighth':'♪ Achtel','len.sixteenth':'𝅘𝅥𝅯 Sechzehntel',
     'v.voice':'Stimme','saved.empty':'Noch nichts gespeichert.'},
-  en:{'tb.menu':'☰ Menu','m.settings':'Settings','m.song':'Song','m.title':'Title','m.composer':'Composer','m.meter':'Time signature','m.tempo':'Tempo (BPM)',
+  en:{'tb.menu':'☰ Menu','m.settings':'Settings','m.song':'Song','m.title':'Title','m.composer':'Composer','m.meter':'Time signature','m.tempo':'Tempo (BPM)','m.unit':'Unit note length (L:)',
     'm.voices':'Voices','m.mode':'Mode','m.single':'Single voice','m.multi':'Multi-voice (SATB)','m.vcount':'Number of voices',
     'm.group':'Staff bundling','m.group.single':'Each voice separate','m.group.pairs':'In pairs (1+2, 3+4)','m.group.sa':'1+2 together, rest separate',
     'm.lyrics':'Lyrics','m.transpose':'Transpose (view only)',
@@ -250,7 +252,7 @@ const I18N={
     'sym.newline':'⏎ New line','sym.repstart':'|: Repeat start','sym.repend':':| Repeat end',
     'len.whole':'𝅝 Whole','len.half':'𝅗𝅥 Half','len.quarter':'♩ Quarter','len.eighth':'♪ Eighth','len.sixteenth':'𝅘𝅥𝅯 Sixteenth',
     'v.voice':'Voice','saved.empty':'Nothing saved yet.'},
-  ru:{'tb.menu':'☰ Меню','m.settings':'Настройки','m.song':'Песня','m.title':'Название','m.composer':'Композитор','m.meter':'Размер','m.tempo':'Темп (BPM)',
+  ru:{'tb.menu':'☰ Меню','m.settings':'Настройки','m.song':'Песня','m.title':'Название','m.composer':'Композитор','m.meter':'Размер','m.tempo':'Темп (BPM)','m.unit':'Длительность единицы (L:)',
     'm.voices':'Голоса','m.mode':'Режим','m.single':'Один голос','m.multi':'Многоголосие (SATB)','m.vcount':'Число голосов',
     'm.group':'Группировка нотоносцев','m.group.single':'Каждый голос отдельно','m.group.pairs':'Парами (1+2, 3+4)','m.group.sa':'1+2 вместе, остальные отдельно',
     'm.lyrics':'Текст песни','m.transpose':'Транспонирование (только вид)',
@@ -356,8 +358,9 @@ function parseBody(body, sig){
       }
       // bar / repeat
       if(c==='|'||c===':'){ let bar=''; while(i<s.length&&/[|:\]\[]/.test(s[i])){bar+=s[i];i++;} if(bar) toks.push({t:bar,kind:'bar'}); continue; }
+      const uq=unitQuarters(state.unitLen);
       // rest
-      if(c==='z'||c==='Z'){ let r='z'; i++; let suf=''; while(i<s.length&&/[0-9\/]/.test(s[i])){suf+=s[i];i++;} toks.push({t:'z'+suf,kind:'rest'}); continue; }
+      if(c==='z'||c==='Z'){ i++; let suf=''; while(i<s.length&&/[0-9\/]/.test(s[i])){suf+=s[i];i++;} toks.push({t:'z'+suf,kind:'rest',dur:parseLen(suf)*uq}); continue; }
       // note: optional accidental, letter, octave marks, length
       const nm=s.slice(i).match(/^(\^\^|__|\^|_|=)?([A-Ga-g])([,']*)([0-9]*\/*[0-9]*)/);
       if(nm){
@@ -367,7 +370,7 @@ function parseBody(body, sig){
         let o = (L===L.toLowerCase())?5:4;
         for(const ch of oct){ if(ch===',')o--; else if(ch==="'")o++; }
         const midi = 12*(o+1) + NAT[letter] + acc;
-        toks.push({t:accCh+L+oct+suf, kind:'note', midi});
+        toks.push({t:accCh+L+oct+suf, kind:'note', midi, dur:parseLen(suf)*uq});
         i+=nm[0].length; continue;
       }
       i++; // skip unknown char
@@ -386,6 +389,7 @@ function loadAbc(abc){
     const cm=abc.match(/^C:(.*)$/m); $('fComposer').value=cm?cm[1].trim():'';
     const mm=abc.match(/^M:(.*)$/m); if(mm)$('fMeter').value=mm[1].trim();
     const qm=abc.match(/^Q:(?:[^=\n]*=)?(\d+)/m); if(qm)$('fTempo').value=qm[1];
+    const lm=abc.match(/^L:\s*(\d+\/\d+)/m); state.unitLen=lm?lm[1]:'1/4'; $('fUnit').value=(['1/1','1/2','1/4','1/8','1/16'].includes(state.unitLen)?state.unitLen:'1/4');
     const multi = /^%%score|^%%staves|^V:/m.test(abc);
     // reset voices
     state.voices=[newVoice(VOICE_DEFS[0]),newVoice(VOICE_DEFS[1]),newVoice(VOICE_DEFS[2]),newVoice(VOICE_DEFS[3])];
@@ -453,6 +457,7 @@ function newVoice(def){ return {name:def.name,clef:def.clef,lo:def.lo,hi:def.hi,
 const state={
   key:{letter:'C',acc:0,mode:'maj'},
   len:'1',               // '4','2','1','/','//'
+  unitLen:'1/4',         // L: unit note length
   voiceMode:'single',    // 'single' | 'multi'
   voiceCount:2,          // voices used in multi mode (2..4)
   activeVoice:0,         // 0-based index into voices
@@ -512,16 +517,37 @@ function scrollToRoot(){
 }
 
 /* ================= editing (token model) ================= */
-function lenSuffix(){ return state.len==='1'?'':state.len; }
-function tokenFor(midi){
-  const pc=((midi%12)+12)%12, info=KM.map[pc];
-  return abcToken(info.letter,info.acc,KM.sig,midi)+lenSuffix();
+// note duration bookkeeping, independent of L: so switching L: keeps the rhythm
+const LEN_Q={'4':4,'2':2,'1':1,'/':0.5,'//':0.25};   // keyboard length → quarters
+function unitQuarters(u){ const m=(u||'1/4').match(/(\d+)\/(\d+)/); return m? 4*(+m[1])/(+m[2]) : 1; }
+function fracSuffix(mult){            // multiplier of L: → abc length suffix
+  if(Math.abs(mult-1)<1e-6) return '';
+  if(mult>1 && Math.abs(mult-Math.round(mult))<1e-6) return String(Math.round(mult));
+  for(const q of [2,4,8,16,3,6]){ const p=mult*q; if(Math.abs(p-Math.round(p))<1e-6){ const pp=Math.round(p); return (pp===1?'':pp)+'/'+q; } }
+  return '';
 }
+function parseLen(suf){               // abc length suffix → multiplier of L:
+  if(!suf) return 1;
+  if(suf==='/') return 0.5; if(suf==='//') return 0.25;
+  const m=suf.match(/^(\d*)\/(\d*)$/); if(m){ return (m[1]?+m[1]:1)/(m[2]?+m[2]:2); }
+  const n=parseInt(suf); return isNaN(n)?1:n;
+}
+function durSuffix(durQ){ return fracSuffix(durQ/unitQuarters(state.unitLen)); }
+function noteStr(midi,durQ){ const pc=((midi%12)+12)%12, info=KM.map[pc]; return abcToken(info.letter,info.acc,KM.sig,midi)+durSuffix(durQ); }
+function restStr(durQ){ return 'z'+durSuffix(durQ); }
+function lenSuffix(){ return durSuffix(LEN_Q[state.len]||1); }
 function insertNote(midi){
-  const v=AV();
-  v.tokens.splice(v.cursor,0,{t:tokenFor(midi),kind:'note',midi});
+  const v=AV(); const dur=LEN_Q[state.len]||1;
+  v.tokens.splice(v.cursor,0,{t:noteStr(midi,dur),kind:'note',midi,dur});
   v.cursor++; v.sel=v.cursor-1;
   playMidi(midi); render(true);
+}
+// recompute all note/rest tokens' abc text after an L: (or key) change
+function resyncTokens(){
+  state.voices.forEach(v=>v.tokens.forEach(tk=>{
+    if(tk.kind==='note') tk.t=noteStr(tk.midi, tk.dur||1);
+    else if(tk.kind==='rest') tk.t=restStr(tk.dur||1);
+  }));
 }
 function insertRaw(s,kind){
   const v=AV();
@@ -540,12 +566,10 @@ function scalePitches(){
 }
 function changePitch(vIdx, idx, step){
   const tk=state.voices[vIdx].tokens[idx]; if(!tk||tk.kind!=='note')return;
-  const suf=(tk.t.match(/[0-9\/]+$/)||[''])[0];     // keep length suffix
   const sp=scalePitches();
   let ni=0, bd=1e9; sp.forEach((m,i)=>{const d=Math.abs(m-tk.midi); if(d<bd){bd=d;ni=i;}});
   const nm=sp[Math.max(0,Math.min(sp.length-1, ni+step))];
-  const pc=((nm%12)+12)%12, info=KM.map[pc];
-  tk.midi=nm; tk.t=abcToken(info.letter,info.acc,KM.sig,nm)+suf;
+  tk.midi=nm; tk.t=noteStr(nm, tk.dur||1);    // keep duration
   playMidi(nm); render(true);
 }
 
@@ -568,7 +592,7 @@ function fullAbc(){
   if($('fTitle').value) h+='T:'+$('fTitle').value+'\n';
   if($('fComposer').value) h+='C:'+$('fComposer').value+'\n';
   h+='M:'+$('fMeter').value+'\n';
-  h+='L:1/4\n';
+  h+='L:'+(state.unitLen||'1/4')+'\n';
   if($('fTempo').value) h+='Q:1/4='+$('fTempo').value+'\n';
   lastMap=[];
   const n=nActive();
@@ -866,7 +890,7 @@ $('symPop').querySelectorAll('button').forEach(b=>b.onclick=()=>{
   else if(s==='repend') insertRaw(':|','bar');
   closePops();
 });
-$('pauseBtn').onclick=()=>insertRaw('z'+lenSuffix(),'rest');
+$('pauseBtn').onclick=()=>{ const v=AV(), dur=LEN_Q[state.len]||1; v.tokens.splice(v.cursor,0,{t:restStr(dur),kind:'rest',dur}); v.cursor++; v.sel=-1; render(true); };
 $('barBtn').onclick=()=>insertRaw('|','bar');
 $('delBtn').onclick=delAtCursor;
 
@@ -881,6 +905,7 @@ $('fVoiceCount').addEventListener('change',()=>{
 $('fGroup').addEventListener('change',()=>{ state.grouping=$('fGroup').value; render(true); });
 $('fLyrics').addEventListener('change',()=>{ state.lyricsOn=$('fLyrics').checked; buildLyricEditors(); render(true); });
 $('fTranspose').addEventListener('change',()=>{ state.transpose=parseInt($('fTranspose').value)||0; render(false); });
+$('fUnit').addEventListener('change',()=>{ state.unitLen=$('fUnit').value; resyncTokens(); render(true); });
 $('abcTa').addEventListener('input',()=>{ render(false); });
 $('btnCopy').onclick=()=>{ navigator.clipboard&&navigator.clipboard.writeText($('abcTa').value); };
 $('btnAbc').onclick=()=>{ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([$('abcTa').value],{type:'text/plain'}));a.download=($('fTitle').value||'lied')+'.abc';a.click(); };
