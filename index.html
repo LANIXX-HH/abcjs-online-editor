@@ -119,14 +119,39 @@ button{font-family:inherit}
         <span style="display:flex;gap:6px;align-items:center">
           <select id="langSel" style="width:auto;padding:3px 6px;font-size:12px"><option value="de">DE</option><option value="en">EN</option><option value="ru">RU</option></select>
           <button class="mx" id="menuClose">✕</button></span></div>
-      <h3 data-i18n="m.song">Lied</h3>
-      <div class="mrow"><label data-i18n="m.title">Titel</label><input id="fTitle" value="Neues Lied"></div>
+      <h3 data-i18n="m.song">Lied-Info</h3>
+      <div class="mrow"><label data-i18n="m.title">Titel</label><input id="fTitle" value="Mein Lied"></div>
       <div class="mrow"><label data-i18n="m.composer">Komponist</label><input id="fComposer" placeholder="optional"></div>
       <div class="mrow"><label data-i18n="m.meter">Taktart</label>
-        <select id="fMeter"><option>4/4</option><option>3/4</option><option>2/4</option><option>6/8</option><option>C</option></select></div>
-      <div class="mrow"><label data-i18n="m.tempo">Tempo (BPM)</label><input id="fTempo" type="number" value="100" min="20" max="240"></div>
+        <select id="fMeter">
+          <option value="" data-i18n="opt.none">— Keine —</option>
+          <option value="4/4" selected data-i18n="meter.44">4/4 – Vier Viertel</option>
+          <option value="3/4" data-i18n="meter.34">3/4 – Walzer</option>
+          <option value="2/4" data-i18n="meter.24">2/4 – Marsch</option>
+          <option value="6/8" data-i18n="meter.68">6/8 – Jig</option>
+          <option value="C" data-i18n="meter.C">C – Common time</option>
+        </select></div>
+      <div class="mrow"><label data-i18n="m.tempo">Tempo (BPM)</label>
+        <select id="fTempo">
+          <option value="" data-i18n="opt.none">— Keine —</option>
+          <option value="40">40 – Grave</option>
+          <option value="60">60 – Largo</option>
+          <option value="72">72 – Adagio</option>
+          <option value="84">84 – Andante</option>
+          <option value="100">100 – Moderato</option>
+          <option value="120" selected>120 – Allegro</option>
+          <option value="144">144 – Vivace</option>
+          <option value="168">168 – Presto</option>
+          <option value="200">200 – Prestissimo</option>
+        </select></div>
       <div class="mrow"><label data-i18n="m.unit">Einheitslänge (L:)</label>
-        <select id="fUnit"><option value="1/1">1/1</option><option value="1/2">1/2</option><option value="1/4" selected>1/4</option><option value="1/8">1/8</option><option value="1/16">1/16</option></select></div>
+        <select id="fUnit">
+          <option value="" data-i18n="opt.none">— Keine —</option>
+          <option value="1/8" data-i18n="unit.8">1/8 – Achtel</option>
+          <option value="1/4" selected data-i18n="unit.4">1/4 – Viertel</option>
+          <option value="1/2" data-i18n="unit.2">1/2 – Halbe</option>
+          <option value="1" data-i18n="unit.1">1 – Ganze</option>
+        </select></div>
       <h3 data-i18n="m.voices">Stimmen</h3>
       <div class="mrow"><label data-i18n="m.mode">Modus</label>
         <select id="fVoiceMode"><option value="single" data-i18n="m.single">Einstimmig</option><option value="multi" data-i18n="m.multi">Mehrstimmig (SATB)</option></select></div>
@@ -228,7 +253,9 @@ const $=id=>document.getElementById(id);
 
 /* ================= i18n ================= */
 const I18N={
-  de:{'tb.menu':'☰ Menü','m.settings':'Einstellungen','m.song':'Lied','m.title':'Titel','m.composer':'Komponist','m.meter':'Taktart','m.tempo':'Tempo (BPM)','m.unit':'Einheitslänge (L:)',
+  de:{'tb.menu':'☰ Menü','m.settings':'Einstellungen','m.song':'Lied-Info','m.title':'Titel','m.composer':'Komponist','m.meter':'Taktart','m.tempo':'Tempo (BPM)','m.unit':'Einheitslänge (L:)',
+    'opt.none':'— Keine —','meter.44':'4/4 – Vier Viertel','meter.34':'3/4 – Walzer','meter.24':'2/4 – Marsch','meter.68':'6/8 – Jig','meter.C':'C – Common time',
+    'unit.8':'1/8 – Achtel','unit.4':'1/4 – Viertel','unit.2':'1/2 – Halbe','unit.1':'1 – Ganze',
     'm.voices':'Stimmen','m.mode':'Modus','m.single':'Einstimmig','m.multi':'Mehrstimmig (SATB)','m.vcount':'Anzahl Stimmen',
     'm.group':'Bündelung der Systeme','m.group.single':'Jede Stimme einzeln','m.group.pairs':'Paarweise (1+2, 3+4)','m.group.sa':'1+2 zusammen, Rest einzeln',
     'm.lyrics':'Liedtext','m.transpose':'Transponieren (nur Ansicht)',
@@ -240,7 +267,9 @@ const I18N={
     'sym.newline':'⏎ Neue Zeile','sym.repstart':'|: Wdh. auf','sym.repend':':| Wdh. zu',
     'len.whole':'𝅝 Ganze','len.half':'𝅗𝅥 Halbe','len.quarter':'♩ Viertel','len.eighth':'♪ Achtel','len.sixteenth':'𝅘𝅥𝅯 Sechzehntel',
     'v.voice':'Stimme','saved.empty':'Noch nichts gespeichert.'},
-  en:{'tb.menu':'☰ Menu','m.settings':'Settings','m.song':'Song','m.title':'Title','m.composer':'Composer','m.meter':'Time signature','m.tempo':'Tempo (BPM)','m.unit':'Unit note length (L:)',
+  en:{'tb.menu':'☰ Menu','m.settings':'Settings','m.song':'Song info','m.title':'Title','m.composer':'Composer','m.meter':'Meter','m.tempo':'Tempo (BPM)','m.unit':'Unit length (L:)',
+    'opt.none':'— None —','meter.44':'4/4 – Common','meter.34':'3/4 – Waltz','meter.24':'2/4 – March','meter.68':'6/8 – Jig','meter.C':'C – Common time',
+    'unit.8':'1/8 – Eighth','unit.4':'1/4 – Quarter','unit.2':'1/2 – Half','unit.1':'1 – Whole',
     'm.voices':'Voices','m.mode':'Mode','m.single':'Single voice','m.multi':'Multi-voice (SATB)','m.vcount':'Number of voices',
     'm.group':'Staff bundling','m.group.single':'Each voice separate','m.group.pairs':'In pairs (1+2, 3+4)','m.group.sa':'1+2 together, rest separate',
     'm.lyrics':'Lyrics','m.transpose':'Transpose (view only)',
@@ -252,7 +281,9 @@ const I18N={
     'sym.newline':'⏎ New line','sym.repstart':'|: Repeat start','sym.repend':':| Repeat end',
     'len.whole':'𝅝 Whole','len.half':'𝅗𝅥 Half','len.quarter':'♩ Quarter','len.eighth':'♪ Eighth','len.sixteenth':'𝅘𝅥𝅯 Sixteenth',
     'v.voice':'Voice','saved.empty':'Nothing saved yet.'},
-  ru:{'tb.menu':'☰ Меню','m.settings':'Настройки','m.song':'Песня','m.title':'Название','m.composer':'Композитор','m.meter':'Размер','m.tempo':'Темп (BPM)','m.unit':'Длительность единицы (L:)',
+  ru:{'tb.menu':'☰ Меню','m.settings':'Настройки','m.song':'О песне','m.title':'Название','m.composer':'Композитор','m.meter':'Размер','m.tempo':'Темп (BPM)','m.unit':'Базовая длит. (L:)',
+    'opt.none':'— Нет —','meter.44':'4/4 – Четыре четверти','meter.34':'3/4 – Вальс','meter.24':'2/4 – Марш','meter.68':'6/8 – Джига','meter.C':'C – Common time',
+    'unit.8':'1/8 – Восьмая','unit.4':'1/4 – Четверть','unit.2':'1/2 – Половинная','unit.1':'1 – Целая',
     'm.voices':'Голоса','m.mode':'Режим','m.single':'Один голос','m.multi':'Многоголосие (SATB)','m.vcount':'Число голосов',
     'm.group':'Группировка нотоносцев','m.group.single':'Каждый голос отдельно','m.group.pairs':'Парами (1+2, 3+4)','m.group.sa':'1+2 вместе, остальные отдельно',
     'm.lyrics':'Текст песни','m.transpose':'Транспонирование (только вид)',
@@ -358,9 +389,8 @@ function parseBody(body, sig){
       }
       // bar / repeat
       if(c==='|'||c===':'){ let bar=''; while(i<s.length&&/[|:\]\[]/.test(s[i])){bar+=s[i];i++;} if(bar) toks.push({t:bar,kind:'bar'}); continue; }
-      const uq=unitQuarters(state.unitLen);
       // rest
-      if(c==='z'||c==='Z'){ i++; let suf=''; while(i<s.length&&/[0-9\/]/.test(s[i])){suf+=s[i];i++;} toks.push({t:'z'+suf,kind:'rest',dur:parseLen(suf)*uq}); continue; }
+      if(c==='z'||c==='Z'){ i++; let suf=''; while(i<s.length&&/[0-9\/]/.test(s[i])){suf+=s[i];i++;} toks.push({t:'z'+suf,kind:'rest',dur:parseLen(suf)}); continue; }
       // note: optional accidental, letter, octave marks, length
       const nm=s.slice(i).match(/^(\^\^|__|\^|_|=)?([A-Ga-g])([,']*)([0-9]*\/*[0-9]*)/);
       if(nm){
@@ -370,7 +400,7 @@ function parseBody(body, sig){
         let o = (L===L.toLowerCase())?5:4;
         for(const ch of oct){ if(ch===',')o--; else if(ch==="'")o++; }
         const midi = 12*(o+1) + NAT[letter] + acc;
-        toks.push({t:accCh+L+oct+suf, kind:'note', midi, dur:parseLen(suf)*uq});
+        toks.push({t:accCh+L+oct+suf, kind:'note', midi, dur:parseLen(suf)});
         i+=nm[0].length; continue;
       }
       i++; // skip unknown char
@@ -380,16 +410,22 @@ function parseBody(body, sig){
   while(toks.length && toks[toks.length-1].kind==='newline') toks.pop();
   return toks;
 }
+// set a <select> value; a value missing from the list is added as an extra option (so nothing is lost)
+function setSel(id,val){
+  const s=$(id);
+  if(val && ![...s.options].some(o=>o.value===val)){ const o=document.createElement('option'); o.value=val; o.textContent=val; s.appendChild(o); }
+  s.value=val;
+}
 // parse a full ABC string back into state; returns true on success
 function loadAbc(abc){
   try{
     const km=abc.match(/^K:\s*(\S+)/m); state.key = km?parseKey(km[1]):{letter:'C',acc:0,mode:'maj'};
     KM=keyMap(state.key);
-    const tm=abc.match(/^T:(.*)$/m); $('fTitle').value=tm?tm[1].trim():'';
+    const tm=abc.match(/^T:(.*)$/m); $('fTitle').value=tm?tm[1].trim():'Mein Lied';
     const cm=abc.match(/^C:(.*)$/m); $('fComposer').value=cm?cm[1].trim():'';
-    const mm=abc.match(/^M:(.*)$/m); if(mm)$('fMeter').value=mm[1].trim();
-    const qm=abc.match(/^Q:(?:[^=\n]*=)?(\d+)/m); if(qm)$('fTempo').value=qm[1];
-    const lm=abc.match(/^L:\s*(\d+\/\d+)/m); state.unitLen=lm?lm[1]:'1/4'; $('fUnit').value=(['1/1','1/2','1/4','1/8','1/16'].includes(state.unitLen)?state.unitLen:'1/4');
+    const mm=abc.match(/^M:(.*)$/m); setSel('fMeter', mm?mm[1].trim():'');
+    const qm=abc.match(/^Q:(?:[^=\n]*=)?(\d+)/m); setSel('fTempo', qm?qm[1]:'');
+    const lm=abc.match(/^L:\s*(\S+)/m); state.unitLen=lm?lm[1].trim():''; setSel('fUnit', state.unitLen);
     const multi = /^%%score|^%%staves|^V:/m.test(abc);
     // reset voices
     state.voices=[newVoice(VOICE_DEFS[0]),newVoice(VOICE_DEFS[1]),newVoice(VOICE_DEFS[2]),newVoice(VOICE_DEFS[3])];
@@ -517,9 +553,9 @@ function scrollToRoot(){
 }
 
 /* ================= editing (token model) ================= */
-// note duration bookkeeping, independent of L: so switching L: keeps the rhythm
-const LEN_Q={'4':4,'2':2,'1':1,'/':0.5,'//':0.25};   // keyboard length → quarters
-function unitQuarters(u){ const m=(u||'1/4').match(/(\d+)\/(\d+)/); return m? 4*(+m[1])/(+m[2]) : 1; }
+// note length = multiple of the unit length L: (like the old editor):
+// a click writes "C" (×1), L: alone decides how long that is.
+const LEN_Q={'4':4,'2':2,'1':1,'/':0.5,'//':0.25};   // keyboard length → multiple of L:
 function fracSuffix(mult){            // multiplier of L: → abc length suffix
   if(Math.abs(mult-1)<1e-6) return '';
   if(mult>1 && Math.abs(mult-Math.round(mult))<1e-6) return String(Math.round(mult));
@@ -532,9 +568,9 @@ function parseLen(suf){               // abc length suffix → multiplier of L:
   const m=suf.match(/^(\d*)\/(\d*)$/); if(m){ return (m[1]?+m[1]:1)/(m[2]?+m[2]:2); }
   const n=parseInt(suf); return isNaN(n)?1:n;
 }
-function durSuffix(durQ){ return fracSuffix(durQ/unitQuarters(state.unitLen)); }
-function noteStr(midi,durQ){ const pc=((midi%12)+12)%12, info=KM.map[pc]; return abcToken(info.letter,info.acc,KM.sig,midi)+durSuffix(durQ); }
-function restStr(durQ){ return 'z'+durSuffix(durQ); }
+function durSuffix(mult){ return fracSuffix(mult); }
+function noteStr(midi,mult){ const pc=((midi%12)+12)%12, info=KM.map[pc]; return abcToken(info.letter,info.acc,KM.sig,midi)+durSuffix(mult); }
+function restStr(mult){ return 'z'+durSuffix(mult); }
 function lenSuffix(){ return durSuffix(LEN_Q[state.len]||1); }
 function insertNote(midi){
   const v=AV(); const dur=LEN_Q[state.len]||1;
@@ -542,7 +578,7 @@ function insertNote(midi){
   v.cursor++; v.sel=v.cursor-1;
   playMidi(midi); render(true);
 }
-// recompute all note/rest tokens' abc text after an L: (or key) change
+// recompute all note/rest tokens' abc text (keeps each length multiple)
 function resyncTokens(){
   state.voices.forEach(v=>v.tokens.forEach(tk=>{
     if(tk.kind==='note') tk.t=noteStr(tk.midi, tk.dur||1);
@@ -589,11 +625,11 @@ function buildVoiceBody(v){
 }
 function fullAbc(){
   let h='X:1\n';
-  if($('fTitle').value) h+='T:'+$('fTitle').value+'\n';
+  h+='T:'+($('fTitle').value||'Mein Lied')+'\n';
   if($('fComposer').value) h+='C:'+$('fComposer').value+'\n';
-  h+='M:'+$('fMeter').value+'\n';
-  h+='L:'+(state.unitLen||'1/4')+'\n';
-  if($('fTempo').value) h+='Q:1/4='+$('fTempo').value+'\n';
+  if($('fMeter').value) h+='M:'+$('fMeter').value+'\n';
+  if(state.unitLen) h+='L:'+state.unitLen+'\n';
+  if($('fTempo').value) h+='Q:'+$('fTempo').value+'\n';
   lastMap=[];
   const n=nActive();
   let out;
@@ -905,7 +941,7 @@ $('fVoiceCount').addEventListener('change',()=>{
 $('fGroup').addEventListener('change',()=>{ state.grouping=$('fGroup').value; render(true); });
 $('fLyrics').addEventListener('change',()=>{ state.lyricsOn=$('fLyrics').checked; buildLyricEditors(); render(true); });
 $('fTranspose').addEventListener('change',()=>{ state.transpose=parseInt($('fTranspose').value)||0; render(false); });
-$('fUnit').addEventListener('change',()=>{ state.unitLen=$('fUnit').value; resyncTokens(); render(true); });
+$('fUnit').addEventListener('change',()=>{ state.unitLen=$('fUnit').value; render(true); });   // only L: changes, notes stay as written
 $('abcTa').addEventListener('input',()=>{ render(false); });
 $('btnCopy').onclick=()=>{ navigator.clipboard&&navigator.clipboard.writeText($('abcTa').value); };
 $('btnAbc').onclick=()=>{ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([$('abcTa').value],{type:'text/plain'}));a.download=($('fTitle').value||'lied')+'.abc';a.click(); };
