@@ -143,6 +143,31 @@ button{font-family:inherit}
 .pop button{border:1.5px solid var(--border);border-radius:7px;background:var(--bg);color:var(--text);font-size:13px;padding:7px 14px;cursor:pointer;font-weight:600}
 .pop button.sel{background:var(--yellow);border-color:#caa52a;color:#1A1D21}
 .k2{display:block;font-size:10.5px;font-weight:500;opacity:.8;line-height:1.2}
+/* circle of fifths key chooser */
+.kc-ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:60;display:flex;align-items:center;justify-content:center;padding:8px}
+.kc-ov[hidden]{display:none}
+.kc-box{background:var(--bg);color:var(--text);border-radius:14px;width:100%;max-width:480px;max-height:calc(100dvh - 16px);overflow:auto;padding:10px 10px 12px;box-shadow:0 10px 30px rgba(0,0,0,.3)}
+.kc-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.kc-wrap{position:relative;width:100%;aspect-ratio:1/1}
+.kc-wrap>svg{position:absolute;inset:0;width:100%;height:100%}
+.kc-seg{cursor:pointer;stroke:var(--bg);stroke-width:3}
+.kc-ring0{fill:var(--bg-page)}.kc-ring1{fill:var(--bg3)}.kc-ring2{fill:var(--bg2)}
+.kc-seg.sel{fill:var(--blue)}
+.kc-lab{pointer-events:none;fill:var(--text);text-anchor:middle;dominant-baseline:middle;font-family:system-ui,sans-serif}
+.kc-lab.sel{fill:#fff}
+.kc-sig{position:absolute;transform:translate(-50%,-50%);pointer-events:none}
+.kc-sig>div,.kc-big>div{height:100%}
+.kc-sig svg,.kc-big svg{height:100%;width:auto;display:block;margin:0 auto}
+.kc-sig svg path{fill:var(--text);stroke:var(--text)}
+.kc-sig svg text{fill:var(--text)}
+.kc-detail{text-align:center;margin-top:6px}
+.kc-big{height:86px;margin:0 auto}
+.kc-big svg path{fill:var(--text);stroke:var(--text)}
+.kc-name{font-size:17px;font-weight:700;margin-top:2px}
+.kc-acc{font-size:12px;color:var(--text2)}
+.kc-act{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
+.kc-act button{border:1.5px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:14px;font-weight:600;padding:8px 14px;cursor:pointer}
+.kc-act .kc-ok{background:var(--blue);border-color:var(--blue);color:#fff}
 
 /* desktop */
 @media(min-width:780px){
@@ -301,6 +326,18 @@ button{font-family:inherit}
 </div>
 <!-- key popover -->
 <div class="pop" id="keyPop"></div>
+<div class="kc-ov" id="kcOv" hidden>
+  <div class="kc-box">
+    <div class="kc-head"><b data-i18n="kc.title">Tonart wählen</b><button class="mx" id="kcClose">✕</button></div>
+    <div class="kc-wrap" id="kcWrap"></div>
+    <div class="kc-detail">
+      <div class="kc-big" id="kcBig"></div>
+      <div class="kc-name" id="kcName"></div>
+      <div class="kc-acc" id="kcAcc"></div>
+    </div>
+    <div class="kc-act"><button id="kcCancel" data-i18n="kc.cancel">Abbrechen</button><button id="kcOk" class="kc-ok" data-i18n="kc.ok">Übernehmen</button></div>
+  </div>
+</div>
 <!-- symbol popover -->
 <div class="pop" id="symPop">
   <button data-sym="newline" data-i18n="sym.newline">⏎ Neue Zeile</button>
@@ -313,7 +350,7 @@ const $=id=>document.getElementById(id);
 
 /* ================= i18n ================= */
 const I18N={
-  de:{'tb.lyrics':'Text','ly.add':'＋ Text','ly.free':'Freitext unter dem Stück','ly.addFree':'＋ Freitext','ly.notes':'Noten','ly.syl':'Silben','ly.under':'Text unter','ly.verse':'Zeile','ly.hint':'Silben mit - trennen, _ hält eine Silbe, * überspringt eine Note, | springt zum nächsten Takt','tb.menu':'☰ Menü','m.settings':'Einstellungen','m.song':'Lied-Info','m.title':'Titel','m.composer':'Komponist','m.meter':'Taktart','m.tempo':'Tempo (BPM)','m.unit':'Einheitslänge (L:)',
+  de:{'kc.title':'Tonart wählen','kc.ok':'Übernehmen','kc.cancel':'Abbrechen','kc.acc0':'keine Vorzeichen','tb.lyrics':'Text','ly.add':'＋ Text','ly.free':'Freitext unter dem Stück','ly.addFree':'＋ Freitext','ly.notes':'Noten','ly.syl':'Silben','ly.under':'Text unter','ly.verse':'Zeile','ly.hint':'Silben mit - trennen, _ hält eine Silbe, * überspringt eine Note, | springt zum nächsten Takt','tb.menu':'☰ Menü','m.settings':'Einstellungen','m.song':'Lied-Info','m.title':'Titel','m.composer':'Komponist','m.meter':'Taktart','m.tempo':'Tempo (BPM)','m.unit':'Einheitslänge (L:)',
     'opt.none':'— Keine —','meter.44':'4/4 – Vier Viertel','meter.34':'3/4 – Walzer','meter.24':'2/4 – Marsch','meter.68':'6/8 – Jig','meter.C':'C – Common time',
     'unit.8':'1/8 – Achtel','unit.4':'1/4 – Viertel','unit.2':'1/2 – Halbe','unit.1':'1 – Ganze',
     'm.voices':'Stimmen','m.mode':'Modus','m.single':'Einstimmig','m.multi':'Mehrstimmig (SATB)','m.vcount':'Anzahl Stimmen',
@@ -327,7 +364,7 @@ const I18N={
     'sym.newline':'⏎ Neue Zeile','sym.repstart':'|: Wdh. auf','sym.repend':':| Wdh. zu',
     'len.whole':'𝅝 Ganze','len.half':'𝅗𝅥 Halbe','len.quarter':'♩ Viertel','len.eighth':'♪ Achtel','len.sixteenth':'𝅘𝅥𝅯 Sechzehntel',
     'v.voice':'Stimme','saved.empty':'Noch nichts gespeichert.'},
-  en:{'tb.lyrics':'Lyrics','ly.add':'＋ Lyrics','ly.free':'Free text below the tune','ly.addFree':'＋ Free text','ly.notes':'notes','ly.syl':'syllables','ly.under':'Text under','ly.verse':'Line','ly.hint':'Split syllables with -, _ holds a syllable, * skips a note, | jumps to the next bar','tb.menu':'☰ Menu','m.settings':'Settings','m.song':'Song info','m.title':'Title','m.composer':'Composer','m.meter':'Meter','m.tempo':'Tempo (BPM)','m.unit':'Unit length (L:)',
+  en:{'kc.title':'Choose key','kc.ok':'Apply','kc.cancel':'Cancel','kc.acc0':'no accidentals','tb.lyrics':'Lyrics','ly.add':'＋ Lyrics','ly.free':'Free text below the tune','ly.addFree':'＋ Free text','ly.notes':'notes','ly.syl':'syllables','ly.under':'Text under','ly.verse':'Line','ly.hint':'Split syllables with -, _ holds a syllable, * skips a note, | jumps to the next bar','tb.menu':'☰ Menu','m.settings':'Settings','m.song':'Song info','m.title':'Title','m.composer':'Composer','m.meter':'Meter','m.tempo':'Tempo (BPM)','m.unit':'Unit length (L:)',
     'opt.none':'— None —','meter.44':'4/4 – Common','meter.34':'3/4 – Waltz','meter.24':'2/4 – March','meter.68':'6/8 – Jig','meter.C':'C – Common time',
     'unit.8':'1/8 – Eighth','unit.4':'1/4 – Quarter','unit.2':'1/2 – Half','unit.1':'1 – Whole',
     'm.voices':'Voices','m.mode':'Mode','m.single':'Single voice','m.multi':'Multi-voice (SATB)','m.vcount':'Number of voices',
@@ -341,7 +378,7 @@ const I18N={
     'sym.newline':'⏎ New line','sym.repstart':'|: Repeat start','sym.repend':':| Repeat end',
     'len.whole':'𝅝 Whole','len.half':'𝅗𝅥 Half','len.quarter':'♩ Quarter','len.eighth':'♪ Eighth','len.sixteenth':'𝅘𝅥𝅯 Sixteenth',
     'v.voice':'Voice','saved.empty':'Nothing saved yet.'},
-  ru:{'tb.lyrics':'Текст','ly.add':'＋ Текст','ly.free':'Свободный текст под песней','ly.addFree':'＋ Свободный текст','ly.notes':'нот','ly.syl':'слогов','ly.under':'Текст под','ly.verse':'Строка','ly.hint':'Слоги через -, _ тянет слог, * пропускает ноту, | переход к следующему такту','tb.menu':'☰ Меню','m.settings':'Настройки','m.song':'О песне','m.title':'Название','m.composer':'Композитор','m.meter':'Размер','m.tempo':'Темп (BPM)','m.unit':'Базовая длит. (L:)',
+  ru:{'kc.title':'Выбор тональности','kc.ok':'Применить','kc.cancel':'Отмена','kc.acc0':'без знаков','tb.lyrics':'Текст','ly.add':'＋ Текст','ly.free':'Свободный текст под песней','ly.addFree':'＋ Свободный текст','ly.notes':'нот','ly.syl':'слогов','ly.under':'Текст под','ly.verse':'Строка','ly.hint':'Слоги через -, _ тянет слог, * пропускает ноту, | переход к следующему такту','tb.menu':'☰ Меню','m.settings':'Настройки','m.song':'О песне','m.title':'Название','m.composer':'Композитор','m.meter':'Размер','m.tempo':'Темп (BPM)','m.unit':'Базовая длит. (L:)',
     'opt.none':'— Нет —','meter.44':'4/4 – Четыре четверти','meter.34':'3/4 – Вальс','meter.24':'2/4 – Марш','meter.68':'6/8 – Джига','meter.C':'C – Common time',
     'unit.8':'1/8 – Восьмая','unit.4':'1/4 – Четверть','unit.2':'1/2 – Половинная','unit.1':'1 – Целая',
     'm.voices':'Голоса','m.mode':'Режим','m.single':'Один голос','m.multi':'Многоголосие (SATB)','m.vcount':'Число голосов',
@@ -428,7 +465,19 @@ const KEYS=[
   ['a-Moll',{letter:'A',acc:0,mode:'min'}],['e-Moll',{letter:'E',acc:0,mode:'min'}],['d-Moll',{letter:'D',acc:0,mode:'min'}],
   ['g-Moll',{letter:'G',acc:0,mode:'min'}],['c-Moll',{letter:'C',acc:0,mode:'min'}],['h-Moll',{letter:'B',acc:0,mode:'min'}],
   ['fis-Moll',{letter:'F',acc:1,mode:'min'}],['b-Moll',{letter:'B',acc:-1,mode:'min'}],['es-Moll',{letter:'E',acc:-1,mode:'min'}],
+  // rest of the circle of fifths
+  ['H-Dur',{letter:'B',acc:0,mode:'maj'}],['Fis-Dur',{letter:'F',acc:1,mode:'maj'}],['Ges-Dur',{letter:'G',acc:-1,mode:'maj'}],
+  ['Des-Dur',{letter:'D',acc:-1,mode:'maj'}],['cis-Moll',{letter:'C',acc:1,mode:'min'}],['gis-Moll',{letter:'G',acc:1,mode:'min'}],
+  ['dis-Moll',{letter:'D',acc:1,mode:'min'}],['f-Moll',{letter:'F',acc:0,mode:'min'}],
 ];
+// circle of fifths: 12 positions clockwise from the top; position 6 holds both enharmonic spellings (flat | sharp)
+const CIRCLE=[
+  {maj:['C-Dur'],min:['a-Moll']},{maj:['G-Dur'],min:['e-Moll']},{maj:['D-Dur'],min:['h-Moll']},{maj:['A-Dur'],min:['fis-Moll']},
+  {maj:['E-Dur'],min:['cis-Moll']},{maj:['H-Dur'],min:['gis-Moll']},{maj:['Ges-Dur','Fis-Dur'],min:['es-Moll','dis-Moll']},
+  {maj:['Des-Dur'],min:['b-Moll']},{maj:['As-Dur'],min:['f-Moll']},{maj:['Es-Dur'],min:['c-Moll']},{maj:['B-Dur'],min:['g-Moll']},
+  {maj:['F-Dur'],min:['d-Moll']},
+];
+function keyByName(n){ const f=KEYS.find(x=>x[0]===n); return f?f[1]:null; }
 function keyAbc(key){ // K: field
   const L=key.letter + (key.acc===1?'#':key.acc===-1?'b':'');
   return L + (key.mode==='min'?'m':'');
@@ -1229,6 +1278,77 @@ function buildKeyPop(){
   });
 }
 
+/* ================= circle of fifths key chooser ================= */
+let kcPick=null;                                     // key name currently previewed in the circle
+const sameKey=(a,b)=>a&&b&&a.letter===b.letter&&a.acc===b.acc&&a.mode===b.mode;
+function keyShort(n){ return n.split('-')[0]; }      // "Fis-Dur" → "Fis", "a-Moll" → "a"
+function accText(k){ const s=Object.values(keyMap(k).sig).filter(a=>a!==0); if(!s.length) return t('kc.acc0'); return s.length+(s[0]>0?'♯':'♭'); }
+// staff with clef + key signature only, drawn by abcjs
+function sigInto(el,k){
+  // abcjs rewrites the style of the element it draws into → draw into an inner div, el keeps position/width
+  el.innerHTML=''; const inner=document.createElement('div'); el.appendChild(inner);
+  ABCJS.renderAbc(inner,'X:1\nL:1/4\nK:'+keyAbc(k)+'\nx',{staffwidth:40,paddingtop:0,paddingbottom:0,paddingleft:0,paddingright:0});
+  inner.removeAttribute('style');                       // abcjs fixes a pixel height here → would clip the scaled staff
+  const s=inner.querySelector('svg'); if(!s) return;
+  const w=parseFloat(s.getAttribute('width')), h=parseFloat(s.getAttribute('height'));
+  if(!s.getAttribute('viewBox') && w && h) s.setAttribute('viewBox','0 0 '+w+' '+h);
+  s.removeAttribute('width'); s.removeAttribute('height'); s.removeAttribute('style');   // size comes from CSS (same height for all keys)
+}
+function arcPath(r1,r2,a1,a2){
+  const p=(r,a)=>{ const rad=a*Math.PI/180; return (200+r*Math.cos(rad)).toFixed(2)+','+(200+r*Math.sin(rad)).toFixed(2); };
+  return 'M'+p(r2,a1)+' A'+r2+','+r2+' 0 0 1 '+p(r2,a2)+' L'+p(r1,a2)+' A'+r1+','+r1+' 0 0 0 '+p(r1,a1)+' Z';
+}
+function buildKeyCircle(){
+  const wrap=$('kcWrap'); wrap.innerHTML='';
+  const NS='http://www.w3.org/2000/svg', svg=document.createElementNS(NS,'svg'); svg.setAttribute('viewBox','0 0 400 400');
+  const R={sig:[150,199], maj:[104,150], min:[60,104]};
+  const add=(tag,attrs,txt)=>{ const e=document.createElementNS(NS,tag); for(const a in attrs) e.setAttribute(a,attrs[a]); if(txt!=null) e.textContent=txt; svg.appendChild(e); return e; };
+  CIRCLE.forEach((pos,i)=>{
+    const mid=-90+30*i;
+    const parts=pos.maj.length;                           // 2 at the bottom: flat spelling left, sharp spelling right
+    for(let h=0; h<parts; h++){
+      const a1 = parts===1? mid-15 : (h===0? mid : mid-15), a2 = parts===1? mid+15 : (h===0? mid+15 : mid);
+      const am=(a1+a2)/2, small=parts>1;
+      [['sig',pos.maj[h]],['maj',pos.maj[h]],['min',pos.min[h]]].forEach(([ring,name],ri)=>{
+        const sel = ring!=='sig' && kcPick===name;
+        const seg=add('path',{d:arcPath(R[ring][0],R[ring][1],a1,a2),class:'kc-seg kc-ring'+ri+(sel?' sel':'')});
+        seg.addEventListener('click',()=>kcChoose(name));
+        if(ring==='sig') return;
+        const r=(R[ring][0]+R[ring][1])/2, rad=am*Math.PI/180, x=200+r*Math.cos(rad), y=200+r*Math.sin(rad);
+        const k=keyByName(name), big = ring==='maj'? (small?14:20) : (small?12:15);
+        add('text',{x:x.toFixed(1),y:(y-5).toFixed(1),class:'kc-lab'+(sel?' sel':''),'font-size':big,'font-weight':'700'},keyShort(name));
+        add('text',{x:x.toFixed(1),y:(y+big*0.62).toFixed(1),class:'kc-lab'+(sel?' sel':''),'font-size':small?7.5:9},solf(k.letter,k.acc));
+      });
+      // key signature staff in the outer ring
+      const d=document.createElement('div'); d.className='kc-sig';
+      const rr=174, rad=am*Math.PI/180;
+      d.style.left=(50+rr/4*Math.cos(rad))+'%'; d.style.top=(50+rr/4*Math.sin(rad))+'%';
+      d.style.height=(parts>1?7:10.5)+'%';                  // same staff height for every key; width follows the accidentals
+      wrap.appendChild(d); sigInto(d,keyByName(pos.maj[h]));
+    }
+  });
+  wrap.insertBefore(svg,wrap.firstChild);
+  // details of the previewed key
+  const k=keyByName(kcPick);
+  sigInto($('kcBig'),k);
+  $('kcName').textContent=kcPick+' · '+keySolf(k);
+  $('kcAcc').textContent=accText(k);
+}
+function kcChoose(name){
+  if(name===kcPick){ kcApply(); return; }               // second tap on the same key = take it
+  kcPick=name; buildKeyCircle();
+}
+function kcApply(){
+  const k=keyByName(kcPick); if(!k) return;
+  state.key={...k}; KM=keyMap(state.key); setKeyBtn();
+  buildKeyboard(); scrollToRoot(); render(true); closeKeyCircle();
+}
+function openKeyCircle(){
+  const cur=KEYS.find(x=>sameKey(x[1],state.key)); kcPick=cur?cur[0]:'C-Dur';
+  $('kcOv').hidden=false; buildKeyCircle();
+}
+function closeKeyCircle(){ $('kcOv').hidden=true; }
+
 /* ================= popovers ================= */
 function openPop(pop, anchor){
   closePops();
@@ -1256,7 +1376,9 @@ $('lenPop').querySelectorAll('button').forEach(b=>b.onclick=()=>{
   const sym={'4':'𝅝','2':'𝅗𝅥','1':'♩','/':'♪','//':'𝅘𝅥𝅯'}[state.len]||'♩';
   $('lenBtn').textContent=sym+' ▾'; closePops();
 });
-$('keyBtn').onclick=()=>{ buildKeyPop(); openPop($('keyPop'),$('keyBtn')); };
+$('keyBtn').onclick=()=>{ closePops(); openKeyCircle(); };
+$('kcOk').onclick=kcApply; $('kcCancel').onclick=closeKeyCircle; $('kcClose').onclick=closeKeyCircle;
+$('kcOv').addEventListener('click',e=>{ if(e.target===$('kcOv')) closeKeyCircle(); });   // tap outside closes
 $('symBtn').onclick=()=>openPop($('symPop'),$('symBtn'));
 $('symPop').querySelectorAll('button').forEach(b=>b.onclick=()=>{
   const s=b.dataset.sym;
