@@ -44,7 +44,7 @@ button{font-family:inherit}
 .app{height:100dvh;display:grid;grid-template-rows:auto auto 1fr}
 .voicebar{display:flex;gap:6px;padding:6px 10px;background:var(--bg2);border-bottom:1.5px solid var(--border);overflow-x:auto}
 .voicebar[hidden]{display:none}
-.vtab{flex:0 0 auto;border:1.5px solid var(--border);border-radius:9px;background:var(--bg);font-size:12px;font-weight:700;padding:5px 12px;cursor:pointer;border-left:5px solid var(--vc,#999)}
+.vtab{flex:0 0 auto;border:1.5px solid var(--border);border-radius:9px;background:var(--bg);color:var(--text);font-size:12px;font-weight:700;padding:5px 12px;cursor:pointer;border-left:5px solid var(--vc,#999)}
 .vtab.active{background:var(--vc,#999);color:#fff;border-color:var(--vc,#999)}
 .topbar{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg);border-bottom:1.5px solid var(--border)}
 .tb-btn{border:1.5px solid var(--border);border-radius:9px;background:var(--bg);color:var(--text);font-size:13px;font-weight:600;padding:6px 11px;cursor:pointer}
@@ -69,6 +69,26 @@ button{font-family:inherit}
 /* note currently being played (▶︎) */
 #paper .abcjs-highlight,#paper .abcjs-highlight *{fill:var(--orange)!important;stroke:var(--orange)!important}
 #paper .abcjs-note{cursor:pointer}
+/* lyrics layer: music greyed and locked, lyric text normal, fields under each system */
+#paper.lyrmode svg path,#paper.lyrmode svg text,#paper.lyrmode svg tspan{fill:#A9AEB8!important;stroke:#A9AEB8!important}
+#paper.lyrmode svg .abcjs-lyric,#paper.lyrmode svg .abcjs-lyric tspan{fill:var(--text)!important;stroke:none!important}
+#paper.lyrmode .abcjs-note{cursor:default}
+.app.lyrmode #micBtn{opacity:.35;pointer-events:none}
+.app.lyrmode .kbd,.app.lyrmode #hint{display:none}          /* no note input in the lyrics layer → full width for music + text */
+.app.lyrmode .body{grid-template-columns:1fr}
+@media(min-width:780px){ .app.lyrmode .body{grid-template-columns:320px 1fr} }
+.lyr-sys{margin:0 0 16px;padding:6px 8px 8px;border-left:3px solid var(--blue);background:var(--bg-page);border-radius:0 6px 6px 0}
+.lyr-staff{margin-top:4px}
+.lyr-staff>b{display:block;font-size:11px;color:var(--text2);margin:2px 0}
+.lyr-row{display:grid;grid-template-columns:1fr auto;gap:2px 6px;align-items:center;margin:4px 0}
+.lyr-row input{grid-column:1;grid-row:1;min-width:0;border:1.5px solid var(--border);border-radius:7px;padding:6px 8px;font-size:14px;background:var(--bg);color:var(--text)}
+.lyr-row .lyr-x{grid-column:2;grid-row:1}
+.lyr-row .cnt{grid-column:1/-1;grid-row:2;font-size:10.5px;color:var(--text2)}
+.lyr-row .cnt.ok{color:#2E8B3E}.lyr-row .cnt.bad{color:var(--orange)}
+.lyr-x,.lyr-add{border:1.5px solid var(--border);border-radius:7px;background:var(--bg);color:var(--text);font-size:12px;font-weight:600;padding:4px 9px;cursor:pointer}
+.lyr-add{margin-top:3px}
+.lyr-free{margin:6px 0 10px;padding:8px;border:1.5px dashed var(--border);border-radius:8px}
+.lyr-free>b{display:block;font-size:12px;margin-bottom:4px}
 #hint{display:block;margin:0 0 6px 2px;font-size:11px;color:var(--text2)}
 .micmon{position:sticky;bottom:6px;margin:8px auto 0;width:max-content;display:flex;align-items:center;gap:10px;background:var(--ink);color:#fff;border-radius:999px;padding:7px 14px;font-size:13px;box-shadow:0 4px 14px rgba(0,0,0,.25)}
 .micmon[hidden]{display:none}
@@ -143,6 +163,7 @@ button{font-family:inherit}
     <span class="tb-title">ABC-Editor</span>
     <button class="tb-btn" id="micBtn" title="Singen → Noten">🎤</button>
     <span class="spacer"></span>
+    <button class="tb-btn" id="lyrBtn" data-i18n="tb.lyrics">Text</button>
     <button class="tb-btn" id="abcBtn" title="ABC-Code">&lt;/&gt;</button>
     <button class="tb-btn" id="themeBtn" title="Hell/Dunkel">🌙</button>
     <button class="tb-btn" id="playBtn">▶︎</button>
@@ -292,7 +313,7 @@ const $=id=>document.getElementById(id);
 
 /* ================= i18n ================= */
 const I18N={
-  de:{'tb.menu':'☰ Menü','m.settings':'Einstellungen','m.song':'Lied-Info','m.title':'Titel','m.composer':'Komponist','m.meter':'Taktart','m.tempo':'Tempo (BPM)','m.unit':'Einheitslänge (L:)',
+  de:{'tb.lyrics':'Text','ly.add':'＋ Text','ly.free':'Freitext unter dem Stück','ly.addFree':'＋ Freitext','ly.notes':'Noten','ly.syl':'Silben','ly.under':'Text unter','ly.verse':'Zeile','ly.hint':'Silben mit - trennen, _ hält eine Silbe, * überspringt eine Note, | springt zum nächsten Takt','tb.menu':'☰ Menü','m.settings':'Einstellungen','m.song':'Lied-Info','m.title':'Titel','m.composer':'Komponist','m.meter':'Taktart','m.tempo':'Tempo (BPM)','m.unit':'Einheitslänge (L:)',
     'opt.none':'— Keine —','meter.44':'4/4 – Vier Viertel','meter.34':'3/4 – Walzer','meter.24':'2/4 – Marsch','meter.68':'6/8 – Jig','meter.C':'C – Common time',
     'unit.8':'1/8 – Achtel','unit.4':'1/4 – Viertel','unit.2':'1/2 – Halbe','unit.1':'1 – Ganze',
     'm.voices':'Stimmen','m.mode':'Modus','m.single':'Einstimmig','m.multi':'Mehrstimmig (SATB)','m.vcount':'Anzahl Stimmen',
@@ -306,7 +327,7 @@ const I18N={
     'sym.newline':'⏎ Neue Zeile','sym.repstart':'|: Wdh. auf','sym.repend':':| Wdh. zu',
     'len.whole':'𝅝 Ganze','len.half':'𝅗𝅥 Halbe','len.quarter':'♩ Viertel','len.eighth':'♪ Achtel','len.sixteenth':'𝅘𝅥𝅯 Sechzehntel',
     'v.voice':'Stimme','saved.empty':'Noch nichts gespeichert.'},
-  en:{'tb.menu':'☰ Menu','m.settings':'Settings','m.song':'Song info','m.title':'Title','m.composer':'Composer','m.meter':'Meter','m.tempo':'Tempo (BPM)','m.unit':'Unit length (L:)',
+  en:{'tb.lyrics':'Lyrics','ly.add':'＋ Lyrics','ly.free':'Free text below the tune','ly.addFree':'＋ Free text','ly.notes':'notes','ly.syl':'syllables','ly.under':'Text under','ly.verse':'Line','ly.hint':'Split syllables with -, _ holds a syllable, * skips a note, | jumps to the next bar','tb.menu':'☰ Menu','m.settings':'Settings','m.song':'Song info','m.title':'Title','m.composer':'Composer','m.meter':'Meter','m.tempo':'Tempo (BPM)','m.unit':'Unit length (L:)',
     'opt.none':'— None —','meter.44':'4/4 – Common','meter.34':'3/4 – Waltz','meter.24':'2/4 – March','meter.68':'6/8 – Jig','meter.C':'C – Common time',
     'unit.8':'1/8 – Eighth','unit.4':'1/4 – Quarter','unit.2':'1/2 – Half','unit.1':'1 – Whole',
     'm.voices':'Voices','m.mode':'Mode','m.single':'Single voice','m.multi':'Multi-voice (SATB)','m.vcount':'Number of voices',
@@ -320,7 +341,7 @@ const I18N={
     'sym.newline':'⏎ New line','sym.repstart':'|: Repeat start','sym.repend':':| Repeat end',
     'len.whole':'𝅝 Whole','len.half':'𝅗𝅥 Half','len.quarter':'♩ Quarter','len.eighth':'♪ Eighth','len.sixteenth':'𝅘𝅥𝅯 Sixteenth',
     'v.voice':'Voice','saved.empty':'Nothing saved yet.'},
-  ru:{'tb.menu':'☰ Меню','m.settings':'Настройки','m.song':'О песне','m.title':'Название','m.composer':'Композитор','m.meter':'Размер','m.tempo':'Темп (BPM)','m.unit':'Базовая длит. (L:)',
+  ru:{'tb.lyrics':'Текст','ly.add':'＋ Текст','ly.free':'Свободный текст под песней','ly.addFree':'＋ Свободный текст','ly.notes':'нот','ly.syl':'слогов','ly.under':'Текст под','ly.verse':'Строка','ly.hint':'Слоги через -, _ тянет слог, * пропускает ноту, | переход к следующему такту','tb.menu':'☰ Меню','m.settings':'Настройки','m.song':'О песне','m.title':'Название','m.composer':'Композитор','m.meter':'Размер','m.tempo':'Темп (BPM)','m.unit':'Базовая длит. (L:)',
     'opt.none':'— Нет —','meter.44':'4/4 – Четыре четверти','meter.34':'3/4 – Вальс','meter.24':'2/4 – Марш','meter.68':'6/8 – Джига','meter.C':'C – Common time',
     'unit.8':'1/8 – Восьмая','unit.4':'1/4 – Четверть','unit.2':'1/2 – Половинная','unit.1':'1 – Целая',
     'm.voices':'Голоса','m.mode':'Режим','m.single':'Один голос','m.multi':'Многоголосие (SATB)','m.vcount':'Число голосов',
@@ -808,6 +829,7 @@ function render(fromButtons){
   if(fromButtons){ $('abcTa').value=fullAbc(); }
   clearTimeout(rt);
   rt=setTimeout(()=>{
+    if(state.lyricMode){ try{ renderLyricLayer(true); }catch(e){ console.warn(e); } return; }   // lyrics layer has its own view
     try{
       const arr=ABCJS.renderAbc('paper', $('abcTa').value, {
         responsive:'resize', add_classes:true, dragging:true, selectTypes:['note'],
@@ -853,6 +875,129 @@ function paintSelection(){
   }
   const noteEls=paper.querySelectorAll('.abcjs-note');
   if(target>=0 && noteEls[target]) noteEls[target].classList.add('sel-note');
+}
+
+/* ================= lyrics layer =================
+   Lyrics are the w: lines that follow a music line of a voice (kept in the voice's tokens as kind 'line').
+   For two voices on one staff the text belongs to the upper voice. Free text = W: lines at the end. */
+let lyrSlots=null;             // {sysDivs:[], headDivs:[], cnt:[[...]]} of the current layer DOM
+function syllCount(text){       // syllables in a w: text (ABC rules: - splits, _ * count as one note each)
+  let n=0;
+  text.replace(/\|/g,' ').split(/\s+/).forEach(w=>{
+    if(!w) return;
+    if(/^-+$/.test(w)){ n+=w.length; return; }
+    w.split('~').join('x').split('-').forEach(p=>{ if(p!=='') n++; });
+  });
+  return n;
+}
+function rowBounds(v,i){ let a=i; while(a>0 && v.tokens[a-1].kind!=='newline') a--; let b=i; while(b<v.tokens.length && v.tokens[b].kind!=='newline') b++; return [a,b]; }
+// w: rows directly after the music row that ends at index b: returns token indices of the 'line' tokens
+function wRowsAfter(v,b){ const out=[]; let j=b; while(j<v.tokens.length && v.tokens[j].kind==='newline' && v.tokens[j+1] && v.tokens[j+1].kind==='line' && /^w:/.test(v.tokens[j+1].t)){ out.push(j+1); j+=2; } return out; }
+// which voice rows/staffs make up each rendered system
+function lyricModel(){
+  const sys=[];
+  visualObj.lines.forEach(l=>{
+    if(!l.staff) return;
+    const staffs=[];
+    l.staff.forEach(st=>{
+      const els=(st.voices&&st.voices[0])||[];
+      const first=els.find(e=>e.startChar!=null && locAtChar(e.startChar)); if(!first) return;
+      const loc=locAtChar(first.startChar), v=state.voices[loc.v]; if(!v) return;
+      const [a,b]=rowBounds(v,loc.i);
+      const notes=els.filter(e=>e.el_type==='note' && !e.rest).length;
+      staffs.push({vi:loc.v, rowEnd:b, rows:wRowsAfter(v,b), notes});
+    });
+    sys.push(staffs);
+  });
+  return sys;
+}
+function wText(t){ return t.replace(/^w:\s?/,''); }
+function wPrefix(t){ const m=t.match(/^w:\s?/); return m?m[0]:'w: '; }
+function cntLabel(el,notes,text){
+  const s=syllCount(text); el.textContent=notes+' '+t('ly.notes')+' · '+s+' '+t('ly.syl');
+  el.className='cnt '+(text.trim()===''?'':(s===notes?'ok':'bad'));
+}
+// render notes for the lyrics layer: one SVG per system, fields below each system.
+// full=false: only the notes are swapped (fields keep focus while typing)
+function renderLyricLayer(full){
+  const paper=$('paper');
+  let off=$('lyrOff'); if(!off){ off=document.createElement('div'); off.id='lyrOff'; off.style.cssText='position:absolute;left:-10000px;top:0;visibility:hidden'; document.body.appendChild(off); }
+  off.style.width=paper.clientWidth+'px';
+  const arr=ABCJS.renderAbc(off, $('abcTa').value, {oneSvgPerLine:true, add_classes:true, responsive:'resize',
+    staffwidth: Math.max(240,$('resultWrap').clientWidth-24), visualTranspose: state.transpose||0});
+  visualObj=arr&&arr[0];
+  const divs=[...off.children], sysDivs=divs.filter(d=>d.querySelector('.abcjs-staff')), headDivs=divs.filter(d=>!d.querySelector('.abcjs-staff'));
+  const model=lyricModel();
+  paper.classList.add('lyrmode'); paper.classList.toggle('multi', state.voiceMode==='multi');
+  if(!full && lyrSlots && lyrSlots.sysDivs.length===sysDivs.length && lyrSlots.headDivs.length===headDivs.length){
+    sysDivs.forEach((d,k)=>{ lyrSlots.sysDivs[k].replaceWith(d); lyrSlots.sysDivs[k]=d; });
+    headDivs.forEach((d,k)=>{ lyrSlots.headDivs[k].replaceWith(d); lyrSlots.headDivs[k]=d; });
+    model.forEach((staffs,k)=>staffs.forEach((st,si)=>st.rows.forEach((ti,ri)=>{
+      const c=lyrSlots.cnt[k]&&lyrSlots.cnt[k][si]&&lyrSlots.cnt[k][si][ri]; if(c) cntLabel(c,st.notes,wText(state.voices[st.vi].tokens[ti].t)); })));
+    setupPlayer(); return;
+  }
+  // full rebuild
+  paper.innerHTML=''; lyrSlots={sysDivs:[],headDivs:[],cnt:[]};
+  headDivs.forEach(d=>{ paper.appendChild(d); lyrSlots.headDivs.push(d); });
+  const hint=document.createElement('div'); hint.className='k2'; hint.style.margin='0 0 8px'; hint.textContent=t('ly.hint'); paper.appendChild(hint);
+  sysDivs.forEach((d,k)=>{
+    paper.appendChild(d); lyrSlots.sysDivs.push(d); lyrSlots.cnt[k]=[];
+    const box=document.createElement('div'); box.className='lyr-sys';
+    (model[k]||[]).forEach((st,si)=>{
+      const v=state.voices[st.vi]; lyrSlots.cnt[k][si]=[];
+      const sb=document.createElement('div'); sb.className='lyr-staff';
+      if((model[k]||[]).length>1){ const lab=document.createElement('b'); lab.textContent=t('ly.under')+' '+(v.name||VOICE_DEFS[st.vi].name); lab.style.color=VOICE_COLORS[st.vi]; sb.appendChild(lab); }
+      st.rows.forEach((ti,ri)=>{
+        const row=document.createElement('div'); row.className='lyr-row';
+        const inp=document.createElement('input'); inp.value=wText(v.tokens[ti].t); inp.placeholder='Sil-be Sil-be …';
+        inp.dataset.key=k+'/'+si+'/'+ri;
+        const cnt=document.createElement('span'); cntLabel(cnt,st.notes,inp.value); lyrSlots.cnt[k][si][ri]=cnt;
+        inp.oninput=()=>{ const tk=v.tokens[ti]; tk.t=wPrefix(tk.t)+inp.value; $('abcTa').value=fullAbc(); cntLabel(cnt,st.notes,inp.value);
+          clearTimeout(rt); rt=setTimeout(()=>renderLyricLayer(false),150); };
+        const x=document.createElement('button'); x.className='lyr-x'; x.textContent='×'; x.title='Entfernen';
+        x.onclick=()=>{ v.tokens.splice(ti-1,2); v.cursor=Math.min(v.cursor,v.tokens.length); $('abcTa').value=fullAbc(); renderLyricLayer(true); };
+        row.append(inp,cnt,x); sb.appendChild(row);
+      });
+      const add=document.createElement('button'); add.className='lyr-add'; add.textContent=t('ly.add');
+      add.onclick=()=>{
+        const at = st.rows.length? st.rows[st.rows.length-1]+1 : st.rowEnd;      // after the last text row of this music row
+        v.tokens.splice(at,0,{t:'',kind:'newline',sep:''},{t:'w: ',kind:'line',sep:''});
+        if(v.cursor>=at) v.cursor+=2;
+        $('abcTa').value=fullAbc(); renderLyricLayer(true);
+        const f=paper.querySelector('input[data-key="'+k+'/'+si+'/'+st.rows.length+'"]'); if(f) f.focus();
+      };
+      sb.appendChild(add); box.appendChild(sb);
+    });
+    paper.appendChild(box);
+  });
+  // free text (W:) at the end of the tune
+  const fb=document.createElement('div'); fb.className='lyr-free';
+  const fl=document.createElement('b'); fl.textContent=t('ly.free'); fb.appendChild(fl);
+  state.doc.layout.forEach(e=>{
+    if(e.type!=='raw' || !/^W:/.test(e.raw)) return;
+    const row=document.createElement('div'); row.className='lyr-row';
+    const inp=document.createElement('input'); inp.value=e.raw.replace(/^W:\s?/,'');
+    inp.oninput=()=>{ const m=e.raw.match(/^W:\s?/); e.raw=(m?m[0]:'W: ')+inp.value; $('abcTa').value=fullAbc(); clearTimeout(rt); rt=setTimeout(()=>renderLyricLayer(false),150); };
+    const x=document.createElement('button'); x.className='lyr-x'; x.textContent='×';
+    x.onclick=()=>{ state.doc.layout.splice(state.doc.layout.indexOf(e),1); $('abcTa').value=fullAbc(); renderLyricLayer(true); };
+    row.append(inp,x); fb.appendChild(row);
+  });
+  const addF=document.createElement('button'); addF.className='lyr-add'; addF.textContent=t('ly.addFree');
+  addF.onclick=()=>{
+    const L=state.doc.layout; let at=L.length; while(at>0 && L[at-1].type==='raw' && /^\s*$/.test(L[at-1].raw)) at--;   // before trailing blank lines
+    L.splice(at,0,{type:'raw',raw:'W: '}); $('abcTa').value=fullAbc(); renderLyricLayer(true);
+    const ins=paper.querySelectorAll('.lyr-free input'); if(ins.length) ins[ins.length-1].focus();
+  };
+  fb.appendChild(addF); paper.appendChild(fb);
+  setupPlayer();
+}
+function setLyricMode(on){
+  if(on && $('abcTa').value!==fullAbc()) loadAbc($('abcTa').value);    // take over unapplied edits from the code panel first
+  state.lyricMode=on;
+  $('app').classList.toggle('lyrmode',on); $('lyrBtn').classList.toggle('on',on);
+  $('abcTa').readOnly=on;
+  if(!on){ $('paper').classList.remove('lyrmode'); lyrSlots=null; }
+  render(true);
 }
 
 /* ================= voices UI ================= */
@@ -1286,6 +1431,7 @@ function setAbcPanel(open){
 }
 (function(){ let o=false; try{ o=localStorage.getItem('abcPanelOpen')==='1'; }catch(e){} setAbcPanel(o); })();
 $('abcBtn').onclick=()=>setAbcPanel($('abcPanel').hidden);
+$('lyrBtn').onclick=()=>setLyricMode(!state.lyricMode);
 
 /* init */
 buildTemplates(); renderSaved();
