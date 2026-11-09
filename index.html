@@ -176,6 +176,7 @@ button{font-family:inherit}
     <div class="result" id="resultWrap">
       <span id="hint" data-i18n="hint">Tippe rechts eine Note · Grundton unten (orange)</span>
       <div id="paper"></div>
+      <div id="player" style="position:absolute;width:0;height:0;overflow:hidden;opacity:0;pointer-events:none"></div>
       <div class="micmon" id="micMon" hidden>
         <span class="mm-note" id="mmNote">—</span>
         <span class="mm-freq" id="mmFreq">0 Hz</span>
@@ -619,6 +620,7 @@ function render(fromButtons){
       });
       visualObj=arr&&arr[0];
       paintSelection();
+      primeAudio();
     }catch(e){ console.warn(e); }
   }, 60);
 }
@@ -802,6 +804,18 @@ const SOUNDFONT_VOL=0.4;
 function playMidi(midi){
   if(!window.ABCJS||!ABCJS.synth||!ABCJS.synth.supportsAudio())return;
   try{ ABCJS.synth.playEvent([{pitch:midi,volume:90,duration:.3,instrument:0,start:0,gap:0}],[],300).catch(()=>{}); }catch(e){}
+}
+// Prime abcjs' shared soundfont cache from the (local, offline) soundfont path, so that
+// playEvent (click/mic/drag sound) also works in the app, not just the ▶︎ transport.
+let synthControl=null, soundfontPrimed=false;
+async function primeAudio(){
+  if(soundfontPrimed) return;
+  if(!window.ABCJS||!ABCJS.synth||!ABCJS.synth.supportsAudio()||!visualObj) return;
+  try{
+    if(!synthControl){ synthControl=new ABCJS.synth.SynthController(); synthControl.load('#player',null,{displayPlay:false,displayProgress:false}); }
+    await synthControl.setTune(visualObj,false,{soundFontUrl:SOUNDFONT_URL,soundFontVolumeMultiplier:SOUNDFONT_VOL});
+    soundfontPrimed=true;
+  }catch(e){ console.warn('primeAudio',e); }
 }
 
 /* ================= key chooser ================= */
