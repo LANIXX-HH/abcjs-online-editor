@@ -1410,7 +1410,14 @@ $('btnSaveSong').onclick=()=>{
 };
 $('btnApplyAbc').onclick=()=>{ loadAbc($('abcTa').value); };
 
-window.addEventListener('resize',()=>render(false));
+// Re-layout only when the WIDTH changes. Opening the on-screen keyboard only changes the height –
+// re-rendering then would rebuild the text fields and close the keyboard again.
+let lastW=window.innerWidth;
+window.addEventListener('resize',()=>{
+  const w=window.innerWidth; if(w===lastW) return; lastW=w;
+  if(state.lyricMode){ clearTimeout(rt); rt=setTimeout(()=>renderLyricLayer(false),150); }   // swap notes only, keep fields
+  else render(false);
+});
 
 $('langSel').value=LANG;
 $('langSel').onchange=()=>setLang($('langSel').value);
