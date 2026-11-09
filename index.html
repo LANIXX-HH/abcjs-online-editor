@@ -393,7 +393,9 @@ function solf(letter,acc){return SOLF[letter]+accSym(acc);}
 function abcToken(letter,acc,sig,midi){
   const sa=sig[letter]!==undefined?sig[letter]:0;
   let acch=''; if(acc!==sa){ acch=acc===0?'=':acc===1?'^':acc===-1?'_':acc===2?'^^':acc===-2?'__':''; }
-  const o=Math.floor(midi/12)-1;
+  // ABC octave follows the written letter, not the key: C♭4 sounds like B3, B♯3 like C4.
+  // So take the octave of the natural letter (midi minus accidental).
+  const o=Math.floor((midi-acc)/12)-1;
   let L=(o>=5)?letter.toLowerCase():letter.toUpperCase();
   let oct= o>5?"'".repeat(o-5) : o<4?",".repeat(4-o) : '';
   return acch+L+oct;
