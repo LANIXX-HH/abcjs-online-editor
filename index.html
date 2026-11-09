@@ -936,11 +936,16 @@ const cursorControl={
   },
   onFinished(){ clearHighlight(); playing=false; setPlayIcon(); }
 };
+// Like the old editor's buildPlayer(): a NEW SynthController after every render.
+// (Re-using one controller does not work: abcjs keeps "isLoaded" after the first play
+//  and would keep playing the tune from that first play.)
 async function setupPlayer(){
   if(!window.ABCJS||!ABCJS.synth||!ABCJS.synth.supportsAudio()||!visualObj) return;
   try{
-    if(!synthControl){ synthControl=new ABCJS.synth.SynthController(); synthControl.load('#player', cursorControl, {displayPlay:true,displayProgress:false}); }
-    if(playing){ playing=false; setPlayIcon(); clearHighlight(); }   // notes changed → stop current playback
+    if(synthControl && playing){ try{ synthControl.pause(); }catch(e){} }   // stop the old one, so two never play at once
+    playing=false; setPlayIcon(); clearHighlight();
+    synthControl=new ABCJS.synth.SynthController();
+    synthControl.load('#player', cursorControl, {displayPlay:true,displayProgress:false});
     await synthControl.setTune(visualObj,false,{soundFontUrl:SOUNDFONT_URL,soundFontVolumeMultiplier:SOUNDFONT_VOL});
   }catch(e){ console.warn('setupPlayer',e); }
 }
