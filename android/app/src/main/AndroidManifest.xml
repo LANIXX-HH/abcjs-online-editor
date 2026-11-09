@@ -2,6 +2,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- WebView/Chromium needs this too, otherwise getUserMedia fails even after RECORD_AUDIO is granted.
+         Normal permission: granted automatically, no extra prompt. -->
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <!-- Internet is not required: the editor and abcjs run fully offline from assets. -->
 
     <uses-feature android:name="android.hardware.microphone" android:required="false" />

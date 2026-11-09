@@ -889,7 +889,7 @@ async function startMic(){
     micState={stream,ctx,analyser,buf:new Float32Array(analyser.fftSize),emitted:null,cand:null,candCount:0,silence:0,hist:[],prevRms:0,pendingOnset:true,raf:null};
     $('micBtn').classList.add('listening'); $('micMon').hidden=false;
     micLoop();
-  }catch(e){ alert('Kein Zugriff auf das Mikrofon'); }
+  }catch(e){ alert('Kein Zugriff auf das Mikrofon'+(e&&e.name?' ('+e.name+(e.message?': '+e.message:'')+')':'')); }
 }
 function stopMic(){
   if(!micState) return;
