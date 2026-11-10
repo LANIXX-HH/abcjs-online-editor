@@ -1421,8 +1421,9 @@ function buildPrintHtml(withAutoPrint){
   document.body.appendChild(tmp);
   let printBody='';
   try{
+    // Lines as written in the ABC (like on screen). No 'wrap': it re-flowed the bars (one bar stretched
+    // over a whole line) and repeated the voice names on every line. One SVG per line → clean page breaks.
     ABCJS.renderAbc(tmp,$('abcTa').value,{staffwidth:680,
-      wrap:{minSpacing:1.8,maxSpacing:2.8,preferredMeasuresPerLine:4},
       oneSvgPerLine:true,scale:1,add_classes:true,visualTranspose:state.transpose||0});
     printBody=tmp.innerHTML;
   }catch(e){ printBody=''; }
@@ -1432,7 +1433,8 @@ function buildPrintHtml(withAutoPrint){
   return '<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+title+'</title>'+
     '<style>html,body{margin:0;background:#fff}'+
     'svg{width:100%;max-width:100%;height:auto;display:block;margin:0 0 6px;break-inside:avoid;page-break-inside:avoid}'+
-    'svg path,svg text,svg tspan,svg ellipse,svg rect{fill:#000!important;stroke:#000!important}'+
+    'svg path,svg ellipse,svg rect{fill:#000!important;stroke:#000!important}'+
+    'svg text,svg tspan{fill:#000!important;stroke:none!important}'+      // no outline on text → lyrics stay crisp
     'svg .abcjs-staff path{stroke-width:1px}'+
     '@media print{@page{size:A4 portrait;margin:1.5cm}}</style></head><body>'+
     printBody+autoPrint+'</body></html>';
