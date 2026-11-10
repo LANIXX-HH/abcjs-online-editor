@@ -1,32 +1,36 @@
-# Android-App (WebView-Wrapper)
+# Android-App
 
-Verpackt den Web-Editor (`index.html` aus dem Repo-Wurzelverzeichnis) als native Android-App. Die App läuft **offline**: der Build bettet `index.html` und `abcjs` in die App-Assets ein.
+Der ABC-Noten-Editor als Android-App. Gleiche Oberfläche und Funktionen wie die Web-Version, läuft aber **vollständig offline**: Editor, Notensatz (abcjs), MP3-Encoder und Klavierklänge sind in die App eingebaut.
 
-## Was drin ist
-- **WebView** lädt `file:///android_asset/index.html`.
-- **Mikrofon** (Singen → Noten): `RECORD_AUDIO` wird zur Laufzeit abgefragt und an die WebView durchgereicht.
-- **Eigene Lieder**: `localStorage` (DOM storage) aktiv.
-- **Export** (MIDI/WAV/ABC): `data:`- und `blob:`-Downloads werden abgefangen und unter *Downloads* gespeichert.
-- **Zurück-Taste**: navigiert in der WebView zurück.
+## Installieren
 
-## Single source of truth
-Die App hat **keine eigene Kopie** von `index.html`. Der Build kopiert die Datei aus dem Repo-Wurzelverzeichnis und biegt die abcjs-CDN-URL auf die lokal eingebettete Datei um. Änderungen am Editor also immer an der Wurzel-`index.html` machen.
+1. In GitHub unter **[Releases](https://github.com/LANIXX-HH/abcjs-online-editor/releases)** die neueste `ABC-Editor-v….apk` (unter *Assets*) herunterladen.
+2. Auf dem Handy öffnen und installieren („Installation aus unbekannten Quellen“ einmalig erlauben).
+3. Beim ersten Antippen von 🎤 fragt Android nach dem Mikrofon – erlauben.
 
-## APK bauen
+Die installierte Version steht im Menü neben „Einstellungen“.
 
-**Automatisch (empfohlen):** Jeder Push auf `main`, der `index.html` oder `android/**` ändert, baut per GitHub Actions ein Debug-APK. Es liegt danach unter *Actions → Build Android APK → Artifacts → `abc-editor-debug-apk`*.
+## Was die App zusätzlich kann
 
-**Lokal:**
-```
-# einmalig: Web-Assets einbetten
-cp index.html android/app/src/main/assets/index.html
-curl -fsSL -o android/app/src/main/assets/abcjs-basic-min.js \
-  https://cdn.jsdelivr.net/npm/abcjs@6.4.3/dist/abcjs-basic-min.js
-sed -i 's#https://cdn.jsdelivr.net/npm/abcjs@6.4.3/dist/abcjs-basic-min.js#abcjs-basic-min.js#' \
-  android/app/src/main/assets/index.html
+- **Noten drucken** über den Android-Druckdienst (auch „Als PDF speichern“).
+- **MIDI-** und **MP3-Export** – Dateien landen unter *Downloads*.
+- **Zurück-Taste** schickt die App in den Hintergrund, statt sie zu schließen.
 
-cd android && gradle assembleDebug
-# Ergebnis: app/build/outputs/apk/debug/app-debug.apk
-```
+## Neue Version bauen
 
-Das Debug-APK ist mit dem Debug-Schlüssel signiert und direkt installierbar (Installation aus unbekannten Quellen erlauben). Für einen Play-Store-Upload wäre zusätzlich ein Release-Signing mit eigenem Keystore nötig.
+**Release (installierbare Version):**
+GitHub → *Actions* → **Build Android APK** → *Run workflow* → Versionsnummer eintragen (z. B. `v1.2.0`) → *Run*.
+Nach ein paar Minuten liegt die APK unter *Releases*.
+
+**Nur testen:** Jeder Push auf `main`, der `index.html` oder `android/**` ändert, baut automatisch eine Test-APK. Sie liegt unter *Actions → Build Android APK → Artifacts → `abc-editor-debug-apk`*.
+
+## Wichtig für Änderungen
+
+Die App hat **keine eigene Kopie** des Editors. Der Build nimmt immer die `index.html` aus dem Hauptverzeichnis und baut sie offline ein. Änderungen am Editor also nur dort machen – Web und App bleiben so automatisch gleich.
+
+## Technik (kurz)
+
+- WebView lädt `file:///android_asset/index.html`.
+- Der Build lädt `abcjs`, `lamejs` (MP3) und den Klavier-Soundfont herunter, legt sie in die App-Assets und biegt die Web-Adressen auf die lokalen Dateien um.
+- Berechtigungen: `RECORD_AUDIO` und `MODIFY_AUDIO_SETTINGS` (Mikrofon), Speichern über `localStorage`.
+- Die APK ist mit dem Debug-Schlüssel signiert; für den Play Store wäre ein eigener Release-Schlüssel nötig.
