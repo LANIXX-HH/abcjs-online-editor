@@ -1430,7 +1430,7 @@ function buildPrintHtml(withAutoPrint){
   document.body.removeChild(tmp);
   if(!printBody){ const svg=$('paper').querySelector('svg'); printBody=svg?svg.outerHTML:''; }
   const autoPrint=withAutoPrint?'<scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},250);};</scr'+'ipt>':'';
-  return '<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+title+'</title>'+
+  return '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>'+title+'</title>'+
     '<style>html,body{margin:0;background:#fff}'+
     'svg{width:100%;max-width:100%;height:auto;display:block;margin:0 0 6px;break-inside:avoid;page-break-inside:avoid}'+
     'svg path,svg ellipse,svg rect{fill:#000!important;stroke:#000!important}'+
@@ -1442,9 +1442,14 @@ function buildPrintHtml(withAutoPrint){
 $('btnPrint').onclick=()=>{
   if(!visualObj){ alert('Noch keine Noten.'); return; }
   if(NATIVE){ try{ AndroidExport.printScore(buildPrintHtml(false),($('fTitle').value||'Noten')); }catch(e){ alert(e.message); } return; }
-  const w=window.open('','_blank','width=800,height=600');
-  if(!w){ alert('Bitte Pop-ups erlauben.'); return; }
-  w.document.write(buildPrintHtml(true)); w.document.close();
+  // Print from a hidden frame inside the page: the print dialog opens directly and afterwards you are back
+  // in the editor (a new tab stayed behind as a bare "about:blank" page on phones).
+  let f=$('printFrame'); if(f) f.remove();
+  f=document.createElement('iframe'); f.id='printFrame';
+  f.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0';
+  document.body.appendChild(f);
+  const d=f.contentWindow.document; d.open(); d.write(buildPrintHtml(false)); d.close();
+  setTimeout(()=>{ try{ f.contentWindow.focus(); f.contentWindow.print(); }catch(e){ alert(e.message); } },300);
 };
 $('btnMidi').onclick=()=>{
   if(!visualObj)return;
