@@ -73,7 +73,7 @@ Knopf **Text** oben öffnet die Liedtext-Ebene (Noten sind dabei gesperrt):
 Erneut **Text** antippen kehrt zur Noteneingabe zurück.
 
 ## Abspielen
-**▶︎** spielt das Stück, **⏮** springt an den Anfang und spielt von dort; die gerade klingende Note wird markiert (bei offenem ABC-Code auch die Stelle im Code). **⏸** pausiert.
+**▶︎** spielt das Stück – ist vorher eine Note angetippt, ab dieser Note. **⏮** springt an den Anfang und spielt von dort; die gerade klingende Note wird markiert (bei offenem ABC-Code auch die Stelle im Code). **⏸** pausiert.
 
 ## ABC-Code
 **`</>`** blendet den ABC-Code über dem Notenbild ein:

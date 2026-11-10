@@ -947,7 +947,7 @@ function onNoteClick(abcElem, tn, classes, analysis, drag, ev){
     changePitch(loc.v, vo.sel, -drag.step); return;   // abcjs: ziehen nach unten → tiefer
   }
   if(loc.v!==state.activeVoice && state.voiceMode==='multi'){ setActiveVoice(loc.v); }
-  if(tk && tk.kind==='note'){ vo.sel=loc.i; vo.cursor=loc.i+1; playMidi(tk.midi); paintSelection(); }
+  if(tk && tk.kind==='note'){ vo.sel=loc.i; vo.cursor=loc.i+1; playFrom={v:loc.v,i:loc.i}; playMidi(tk.midi); paintSelection(); }
 }
 function paintSelection(){
   const paper=$('paper');
@@ -1287,7 +1287,7 @@ const cursorControl={
     if(ev.elements) ev.elements.forEach(arr=>{ if(Array.isArray(arr)) arr.forEach(el=>{ if(el) el.classList.add('abcjs-highlight'); }); else if(arr) arr.classList.add('abcjs-highlight'); });
     if(ev.startChar!=null && !$('abcPanel').hidden){ try{ $('abcTa').setSelectionRange(ev.startChar, ev.endChar); }catch(e){} }
   },
-  onFinished(){ clearHighlight(); playing=false; setPlayIcon(); }
+  onFinished(){ clearHighlight(); playing=false; setPlayIcon(); }   // abcjs resets isStarted itself
 };
 // Like the old editor's buildPlayer(): a NEW SynthController after every render.
 // (Re-using one controller does not work: abcjs keeps "isLoaded" after the first play
@@ -1450,24 +1450,49 @@ $('abcTa').addEventListener('input',()=>{ render(false); });
 $('btnCopy').onclick=()=>{ navigator.clipboard&&navigator.clipboard.writeText($('abcTa').value); };
 $('btnAbc').onclick=()=>{ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([$('abcTa').value],{type:'text/plain'}));a.download=($('fTitle').value||'lied')+'.abc';a.click(); };
 
+// abcjs' play() is a toggle (isStarted flips); pause/resume must both go through it,
+// otherwise isStarted and our icon drift apart and the next ▶︎ does nothing.
+let playFrom=null;                                  // {v,i}: note clicked since the last start → ▶︎ starts there
+function noteSeconds(loc){                          // start time of a token, from abcjs' own note timings
+  const tm=synthControl&&synthControl.timer; if(!tm||!tm.noteTimings) return null;
+  for(const ev of tm.noteTimings){
+    const chars=ev.startCharArray||(ev.startChar!=null?[ev.startChar]:[]);
+    for(const c of chars){ const r=locAtChar(c); if(r && r.v===loc.v && r.i===loc.i) return ev.milliseconds/1000; }
+  }
+  return null;
+}
+function seekTo(sec){                               // move audio AND cursor; percent is what play() restarts the cursor from
+  synthControl.timer.setProgress(sec,'seconds');
+  const mb=synthControl.midiBuffer; mb.seek(sec,'seconds');
+  // abcjs bug: a seek while sounding does not move startTimeSec, so the next ⏸/▶︎ resumed the audio
+  // at the old position while the cursor was at the new one → fix the bookkeeping here.
+  if(mb.isRunning) mb.startTimeSec = ABCJS.synth.activeAudioContext().currentTime - sec;
+  synthControl.percent = synthControl.timer.lastMoment ? Math.min(1, sec*1000/synthControl.timer.lastMoment) : 0;
+}
+async function startPlay(fromSec){
+  if(!synthControl.isLoaded) await synthControl.go();           // load first, so we can seek before sound starts
+  if(fromSec==null && playFrom){ fromSec=noteSeconds(playFrom); }
+  playFrom=null;
+  if(fromSec!=null) seekTo(fromSec);
+  if(!synthControl.isStarted) await synthControl.play();
+  playing=!!synthControl.isStarted; setPlayIcon();
+}
 $('playBtn').onclick=async()=>{
   if(!visualObj||!ABCJS.synth.supportsAudio())return;
   try{
     if(!synthControl) await setupPlayer();
-    if(playing){ synthControl.pause(); playing=false; setPlayIcon(); return; }   // ⏸ pauses
-    await synthControl.play();                                                   // ▶︎ starts / resumes
-    playing=true; setPlayIcon();
+    if(synthControl.isStarted){ await synthControl.play(); playing=false; setPlayIcon(); return; }   // ⏸ (toggle)
+    await startPlay(null);                                                                         // ▶︎ resume, or from the clicked note
   }catch(e){ console.warn(e); }
 };
-
-// ⏮ like the old editor's restart: jump to the start and play from there
+// ⏮ like the old editor's restart: back to the start and play from there
 $('restartBtn').onclick=async()=>{
   if(!visualObj||!ABCJS.synth.supportsAudio())return;
   try{
     if(!synthControl) await setupPlayer();
-    clearHighlight();
-    synthControl.restart();                       // back to 0 (keeps playing if it was playing)
-    if(!playing){ await synthControl.play(); playing=true; setPlayIcon(); }
+    clearHighlight(); playFrom=null;
+    if(synthControl.isStarted){ seekTo(0); return; }   // keeps playing, from 0
+    await startPlay(0);
   }catch(e){ console.warn(e); }
 };
 
