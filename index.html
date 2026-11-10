@@ -259,6 +259,8 @@ button{font-family:inherit}
       <div class="mrow"><label data-i18n="m.gate">Empfindlichkeit (Pegel-Schwelle)</label>
         <input id="micGate" type="range" min="2" max="40" value="10"></div>
       <div class="mrow"><label><input type="checkbox" id="micDsp" style="width:auto;margin-right:6px"><span data-i18n="m.dsp">Browser-Rauschunterdrückung</span></label></div>
+      <h3 data-i18n="m.edit">Bearbeiten</h3>
+      <div class="mrow"><label><input type="checkbox" id="fDrag" style="width:auto;margin-right:6px"><span data-i18n="m.drag">Noten ziehen (Tonhöhe per Finger/Maus ändern)</span></label></div>
       <h3><span data-i18n="m.display">Darstellung</span> <span style="text-transform:none;font-weight:400" data-i18n="m.displayhint">(ändert Noten nicht)</span></h3>
       <div class="mrow" id="clefRow"><label data-i18n="m.clef">Notenschlüssel</label>
         <select id="fClef"><option value="treble" data-i18n="m.clef.treble">Violin</option><option value="bass" data-i18n="m.clef.bass">Bass</option><option value="alto" data-i18n="m.clef.alto">Alt</option></select></div>
@@ -357,7 +359,7 @@ const $=id=>document.getElementById(id);
 
 /* ================= i18n ================= */
 const I18N={
-  de:{'kc.title':'Tonart wählen','kc.ok':'Übernehmen','kc.cancel':'Abbrechen','kc.acc0':'keine Vorzeichen','tb.lyrics':'Text','ly.add':'＋ Text','ly.free':'Freitext unter dem Stück','ly.addFree':'＋ Freitext','ly.notes':'Noten','ly.syl':'Silben','ly.under':'Text unter','ly.verse':'Zeile','ly.hint':'Silben mit - trennen, _ hält eine Silbe, * überspringt eine Note, | springt zum nächsten Takt','tb.menu':'☰ Menü','m.settings':'Einstellungen','m.song':'Lied-Info','m.title':'Titel','m.composer':'Komponist','m.meter':'Taktart','m.tempo':'Tempo (BPM)','m.unit':'Einheitslänge (L:)',
+  de:{'m.edit':'Bearbeiten','m.drag':'Noten ziehen (Tonhöhe per Finger/Maus ändern)','kc.title':'Tonart wählen','kc.ok':'Übernehmen','kc.cancel':'Abbrechen','kc.acc0':'keine Vorzeichen','tb.lyrics':'Text','ly.add':'＋ Text','ly.free':'Freitext unter dem Stück','ly.addFree':'＋ Freitext','ly.notes':'Noten','ly.syl':'Silben','ly.under':'Text unter','ly.verse':'Zeile','ly.hint':'Silben mit - trennen, _ hält eine Silbe, * überspringt eine Note, | springt zum nächsten Takt','tb.menu':'☰ Menü','m.settings':'Einstellungen','m.song':'Lied-Info','m.title':'Titel','m.composer':'Komponist','m.meter':'Taktart','m.tempo':'Tempo (BPM)','m.unit':'Einheitslänge (L:)',
     'opt.none':'— Keine —','meter.44':'4/4 – Vier Viertel','meter.34':'3/4 – Walzer','meter.24':'2/4 – Marsch','meter.68':'6/8 – Jig','meter.C':'C – Common time',
     'unit.8':'1/8 – Achtel','unit.4':'1/4 – Viertel','unit.2':'1/2 – Halbe','unit.1':'1 – Ganze',
     'm.voices':'Stimmen','m.mode':'Modus','m.single':'Einstimmig','m.multi':'Mehrstimmig (SATB)','m.vcount':'Anzahl Stimmen',
@@ -371,7 +373,7 @@ const I18N={
     'sym.newline':'⏎ Neue Zeile','sym.repstart':'|: Wdh. auf','sym.repend':':| Wdh. zu',
     'len.whole':'𝅝 Ganze','len.half':'𝅗𝅥 Halbe','len.quarter':'♩ Viertel','len.eighth':'♪ Achtel','len.sixteenth':'𝅘𝅥𝅯 Sechzehntel',
     'v.voice':'Stimme','saved.empty':'Noch nichts gespeichert.'},
-  en:{'kc.title':'Choose key','kc.ok':'Apply','kc.cancel':'Cancel','kc.acc0':'no accidentals','tb.lyrics':'Lyrics','ly.add':'＋ Lyrics','ly.free':'Free text below the tune','ly.addFree':'＋ Free text','ly.notes':'notes','ly.syl':'syllables','ly.under':'Text under','ly.verse':'Line','ly.hint':'Split syllables with -, _ holds a syllable, * skips a note, | jumps to the next bar','tb.menu':'☰ Menu','m.settings':'Settings','m.song':'Song info','m.title':'Title','m.composer':'Composer','m.meter':'Meter','m.tempo':'Tempo (BPM)','m.unit':'Unit length (L:)',
+  en:{'m.edit':'Editing','m.drag':'Drag notes (change pitch with finger/mouse)','kc.title':'Choose key','kc.ok':'Apply','kc.cancel':'Cancel','kc.acc0':'no accidentals','tb.lyrics':'Lyrics','ly.add':'＋ Lyrics','ly.free':'Free text below the tune','ly.addFree':'＋ Free text','ly.notes':'notes','ly.syl':'syllables','ly.under':'Text under','ly.verse':'Line','ly.hint':'Split syllables with -, _ holds a syllable, * skips a note, | jumps to the next bar','tb.menu':'☰ Menu','m.settings':'Settings','m.song':'Song info','m.title':'Title','m.composer':'Composer','m.meter':'Meter','m.tempo':'Tempo (BPM)','m.unit':'Unit length (L:)',
     'opt.none':'— None —','meter.44':'4/4 – Common','meter.34':'3/4 – Waltz','meter.24':'2/4 – March','meter.68':'6/8 – Jig','meter.C':'C – Common time',
     'unit.8':'1/8 – Eighth','unit.4':'1/4 – Quarter','unit.2':'1/2 – Half','unit.1':'1 – Whole',
     'm.voices':'Voices','m.mode':'Mode','m.single':'Single voice','m.multi':'Multi-voice (SATB)','m.vcount':'Number of voices',
@@ -385,7 +387,7 @@ const I18N={
     'sym.newline':'⏎ New line','sym.repstart':'|: Repeat start','sym.repend':':| Repeat end',
     'len.whole':'𝅝 Whole','len.half':'𝅗𝅥 Half','len.quarter':'♩ Quarter','len.eighth':'♪ Eighth','len.sixteenth':'𝅘𝅥𝅯 Sixteenth',
     'v.voice':'Voice','saved.empty':'Nothing saved yet.'},
-  ru:{'kc.title':'Выбор тональности','kc.ok':'Применить','kc.cancel':'Отмена','kc.acc0':'без знаков','tb.lyrics':'Текст','ly.add':'＋ Текст','ly.free':'Свободный текст под песней','ly.addFree':'＋ Свободный текст','ly.notes':'нот','ly.syl':'слогов','ly.under':'Текст под','ly.verse':'Строка','ly.hint':'Слоги через -, _ тянет слог, * пропускает ноту, | переход к следующему такту','tb.menu':'☰ Меню','m.settings':'Настройки','m.song':'О песне','m.title':'Название','m.composer':'Композитор','m.meter':'Размер','m.tempo':'Темп (BPM)','m.unit':'Базовая длит. (L:)',
+  ru:{'m.edit':'Редактирование','m.drag':'Перетаскивать ноты (менять высоту пальцем/мышью)','kc.title':'Выбор тональности','kc.ok':'Применить','kc.cancel':'Отмена','kc.acc0':'без знаков','tb.lyrics':'Текст','ly.add':'＋ Текст','ly.free':'Свободный текст под песней','ly.addFree':'＋ Свободный текст','ly.notes':'нот','ly.syl':'слогов','ly.under':'Текст под','ly.verse':'Строка','ly.hint':'Слоги через -, _ тянет слог, * пропускает ноту, | переход к следующему такту','tb.menu':'☰ Меню','m.settings':'Настройки','m.song':'О песне','m.title':'Название','m.composer':'Композитор','m.meter':'Размер','m.tempo':'Темп (BPM)','m.unit':'Базовая длит. (L:)',
     'opt.none':'— Нет —','meter.44':'4/4 – Четыре четверти','meter.34':'3/4 – Вальс','meter.24':'2/4 – Марш','meter.68':'6/8 – Джига','meter.C':'C – Common time',
     'unit.8':'1/8 – Восьмая','unit.4':'1/4 – Четверть','unit.2':'1/2 – Половинная','unit.1':'1 – Целая',
     'm.voices':'Голоса','m.mode':'Режим','m.single':'Один голос','m.multi':'Многоголосие (SATB)','m.vcount':'Число голосов',
@@ -888,7 +890,7 @@ function render(fromButtons){
     if(state.lyricMode){ try{ renderLyricLayer(true); }catch(e){ console.warn(e); } return; }   // lyrics layer has its own view
     try{
       const arr=ABCJS.renderAbc('paper', $('abcTa').value, {
-        responsive:'resize', add_classes:true, dragging:true, selectTypes:['note'],
+        responsive:'resize', add_classes:true, dragging:!!state.dragOn, selectTypes:['note'],   // dragging only if switched on in the settings
         staffwidth: Math.max(240,$('resultWrap').clientWidth-24),
         visualTranspose: state.transpose||0,
         clickListener:onNoteClick
@@ -1555,6 +1557,10 @@ window.addEventListener('resize',()=>{
   else render(false);
 });
 
+// note dragging: off by default (scrolling over a note moved it), choice is saved
+state.dragOn=(()=>{ try{ return localStorage.getItem('abcDragOn')==='1'; }catch(e){ return false; } })();
+$('fDrag').checked=state.dragOn;
+$('fDrag').onchange=()=>{ state.dragOn=$('fDrag').checked; try{ localStorage.setItem('abcDragOn',state.dragOn?'1':'0'); }catch(e){} render(false); };
 $('langSel').value=LANG;
 $('langSel').onchange=()=>setLang($('langSel').value);
 
