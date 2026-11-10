@@ -18,7 +18,7 @@ Web-Version und App funktionieren gleich. Die App läuft komplett offline; die W
 
 | Bereich | Inhalt |
 |---|---|
-| **Oben** | ☰ Menü · 🎤 Singen → Noten · **Text** (Liedtext) · **`</>`** ABC-Code · 🌙/☀︎ Hell/Dunkel · ▶︎ Abspielen |
+| **Oben** | ☰ Menü · 🎤 Singen → Noten · **Text** (Liedtext) · **`</>`** ABC-Code · 🌙/☀︎ Hell/Dunkel · ⏮ Von Anfang · ▶︎ Abspielen |
 | **Mitte** | Das Notenbild – hier arbeitet man |
 | **Rechts** | Klaviatur zum Eingeben, darüber/darunter die Werkzeuge |
 | **Menü** | Einstellungen, Stimmen, Export, Vorlagen, gespeicherte Lieder, Sprache |
@@ -73,7 +73,7 @@ Knopf **Text** oben öffnet die Liedtext-Ebene (Noten sind dabei gesperrt):
 Erneut **Text** antippen kehrt zur Noteneingabe zurück.
 
 ## Abspielen
-**▶︎** spielt das Stück; die gerade klingende Note wird markiert (bei offenem ABC-Code auch die Stelle im Code). **⏸** pausiert.
+**▶︎** spielt das Stück, **⏮** springt an den Anfang und spielt von dort; die gerade klingende Note wird markiert (bei offenem ABC-Code auch die Stelle im Code). **⏸** pausiert.
 
 ## ABC-Code
 **`</>`** blendet den ABC-Code über dem Notenbild ein:

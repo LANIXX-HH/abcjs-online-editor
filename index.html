@@ -52,6 +52,7 @@ button{font-family:inherit}
 .tb-btn{border:1.5px solid var(--border);border-radius:9px;background:var(--bg);color:var(--text);font-size:13px;font-weight:600;padding:6px 11px;cursor:pointer}
 .tb-btn.on{background:var(--yellow);border-color:#caa52a}
 .tb-title{font-weight:700;font-size:14px}
+@media(max-width:520px){ .tb-title{display:none} .topbar{gap:5px;padding:7px 8px} .topbar .tb-btn{padding:6px 9px} }   /* phones: room for ⏮ ▶︎ */
 .spacer{flex:1}
 .body{display:grid;grid-template-columns:1fr 128px;min-height:0;position:relative}
 .result{position:relative;overflow:auto;background:var(--bg-page);padding:10px}
@@ -202,6 +203,7 @@ button{font-family:inherit}
     <button class="tb-btn" id="lyrBtn" data-i18n="tb.lyrics">Text</button>
     <button class="tb-btn" id="abcBtn" title="ABC-Code">&lt;/&gt;</button>
     <button class="tb-btn" id="themeBtn" title="Hell/Dunkel">🌙</button>
+    <button class="tb-btn" id="restartBtn" title="Von Anfang">⏮</button>
     <button class="tb-btn" id="playBtn">▶︎</button>
   </div>
   <div class="voicebar" id="voicebar" hidden></div>
@@ -1455,6 +1457,17 @@ $('playBtn').onclick=async()=>{
     if(playing){ synthControl.pause(); playing=false; setPlayIcon(); return; }   // ⏸ pauses
     await synthControl.play();                                                   // ▶︎ starts / resumes
     playing=true; setPlayIcon();
+  }catch(e){ console.warn(e); }
+};
+
+// ⏮ like the old editor's restart: jump to the start and play from there
+$('restartBtn').onclick=async()=>{
+  if(!visualObj||!ABCJS.synth.supportsAudio())return;
+  try{
+    if(!synthControl) await setupPlayer();
+    clearHighlight();
+    synthControl.restart();                       // back to 0 (keeps playing if it was playing)
+    if(!playing){ await synthControl.play(); playing=true; setPlayIcon(); }
   }catch(e){ console.warn(e); }
 };
 
