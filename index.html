@@ -12,10 +12,11 @@
   /* piano: classic white/black, foreign tones grey, root reddish */
   --wk-bg:#FFFFFF; --wk-fg:#000000; --wk-bd:#9A9A9A;
   --bk-bg:#1A1A1A; --bk-fg:#FFFFFF; --bk-bd:#000000;
-  --wk-off-bg:#D4D4D4; --wk-off-fg:#555555;
-  --bk-off-bg:#8C8C8C; --bk-off-fg:#F0F0F0;
-  --wk-root-bg:#F8C9CF; --wk-root-fg:#000000; --wk-root-bd:#C76B78;
-  --bk-root-bg:#7A1414; --bk-root-fg:#FFFFFF; --bk-root-bd:#4A0A0A;
+  --wk-off-bg:#FFFFFF; --wk-off-fg:#000000;       /* classic keys: same look in and out of the key */
+  --bk-off-bg:#1A1A1A; --bk-off-fg:#FFFFFF;
+  --wk-root-bg:#FFFFFF; --wk-root-fg:#000000; --wk-root-bd:#9A9A9A;
+  --bk-root-bg:#1A1A1A; --bk-root-fg:#FFFFFF; --bk-root-bd:#000000;
+  --dot:#8E939C; --dot-root:#8B1A1A;               /* scale tones: grey dot, root: dark red dot */
   /* score sheet */
   --paper:#FFFFFF; --note:#000000; --staff:#000000;
 }
@@ -23,10 +24,11 @@
   /* piano inverted: white keys black, black keys white (root likewise) */
   --wk-bg:#111111; --wk-fg:#FFFFFF; --wk-bd:#555555;
   --bk-bg:#F2F2F2; --bk-fg:#000000; --bk-bd:#FFFFFF;
-  --wk-off-bg:#3A3A3A; --wk-off-fg:#A0A0A0;
-  --bk-off-bg:#A8A8A8; --bk-off-fg:#222222;
-  --wk-root-bg:#7A1414; --wk-root-fg:#FFFFFF; --wk-root-bd:#B03030;
-  --bk-root-bg:#F8C9CF; --bk-root-fg:#000000; --bk-root-bd:#FFFFFF;
+  --wk-off-bg:#111111; --wk-off-fg:#FFFFFF;
+  --bk-off-bg:#F2F2F2; --bk-off-fg:#000000;
+  --wk-root-bg:#111111; --wk-root-fg:#FFFFFF; --wk-root-bd:#555555;
+  --bk-root-bg:#F2F2F2; --bk-root-fg:#000000; --bk-root-bd:#FFFFFF;
+  --dot:#8E939C; --dot-root:#A11F1F;
   --paper:#23262C; --note:#E4E6EB; --staff:#9198A8;
   --bg-page:#1A1C20; --bg:#23262C; --bg2:#2C2F38; --bg3:#363940; --border:#44474F;
   --text:#E4E6EB; --text2:#9198A8;
@@ -113,6 +115,11 @@ button{font-family:inherit}
 .bk{position:absolute;left:2px;width:56%;height:24px;border-radius:6px;border:1.5px solid var(--bk-bd);background:var(--bk-off-bg);color:var(--bk-off-fg);display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;cursor:pointer;user-select:none;z-index:3}
 .bk.inkey{background:var(--bk-bg);color:var(--bk-fg)}
 .bk.root{background:var(--bk-root-bg);border-color:var(--bk-root-bd);color:var(--bk-root-fg)}
+/* scale marking: dot at the front (right) end of the key; root = bigger dark red dot with a light ring */
+.wk.inkey::after,.wk.root::after,.bk.inkey::after,.bk.root::after{content:'';position:absolute;right:8px;top:50%;transform:translateY(-50%);border-radius:50%;pointer-events:none}
+.wk.inkey::after,.bk.inkey::after{width:9px;height:9px;background:var(--dot)}
+.wk.root::after,.bk.root::after{width:13px;height:13px;background:var(--dot-root);box-shadow:0 0 0 2px #fff}
+.bk.inkey::after,.bk.root::after{right:6px}
 .kactrow{display:flex;flex-direction:column;gap:4px;padding:6px 6px;border-top:1.5px solid var(--border)}
 
 /* menu drawer */
