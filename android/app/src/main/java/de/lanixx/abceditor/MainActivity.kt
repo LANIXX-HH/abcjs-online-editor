@@ -3,6 +3,7 @@ package de.lanixx.abceditor
 import android.Manifest
 import android.content.ContentValues
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -13,6 +14,7 @@ import android.provider.MediaStore
 import android.util.Base64
 import android.webkit.JavascriptInterface
 import android.webkit.PermissionRequest
+import android.webkit.WebResourceRequest
 import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -78,7 +80,17 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        web.webViewClient = WebViewClient()
+        // Web links (GitHub, releases …) open in the phone's browser – the editor and the current song stay.
+        web.webViewClient = object : WebViewClient() {
+            override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+                val u = request.url
+                if (u.scheme == "http" || u.scheme == "https") {
+                    try { startActivity(Intent(Intent.ACTION_VIEW, u)) } catch (e: Exception) { }
+                    return true
+                }
+                return false
+            }
+        }
 
         // Export buttons (MIDI / WAV / ABC) produce data: or blob: URLs.
         web.setDownloadListener { url, _, _, mimetype, _ ->

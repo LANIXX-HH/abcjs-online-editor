@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'index.html'
+      - 'README.md'
       - 'android/**'
       - '.github/workflows/android.yml'
     tags:
@@ -53,6 +54,11 @@ jobs:
           sed -i 's#<script src="abcjs-basic-min.js"></script>#<script src="abcjs-basic-min.js"></script><script src="lame.min.js"></script>#' \
             "$ASSETS/index.html"
           echo "Assets prepared:"; ls -la "$ASSETS"
+
+      - name: Bundle user guide (README.md → offline help page)
+        run: |
+          pip install --quiet markdown
+          python3 android/build_docs.py README.md android/app/src/main/assets/docs.html
 
       - name: Bundle piano soundfont (offline audio + MP3)
         run: |

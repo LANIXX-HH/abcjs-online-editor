@@ -14,6 +14,8 @@ Die installierte Version steht im Menü neben „Einstellungen“.
 
 - **Noten drucken** über den Android-Druckdienst (auch „Als PDF speichern“).
 - **MIDI-** und **MP3-Export** – Dateien landen unter *Downloads*.
+- **Anleitung offline:** Menü → 📖 Anleitung zeigt die Bedienungsanleitung ohne Internet (wird beim Build aus `README.md` erzeugt).
+- **Links** (z. B. „Projekt auf GitHub“) öffnen im Browser des Handys; das gerade bearbeitete Lied bleibt offen.
 - **Zurück-Taste** schickt die App in den Hintergrund, statt sie zu schließen.
 
 ## Neue Version bauen

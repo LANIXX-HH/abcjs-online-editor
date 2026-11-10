@@ -96,7 +96,7 @@ Erneut **Text** antippen kehrt zur Noteneingabe zurück.
 
 **Einheitslänge:** Ein Klick schreibt z. B. `C`; wie lang dieses `C` ist, bestimmt die Einheitslänge (1/4 = Viertel, 1/2 = Halbe …). Umstellen ändert die Darstellung aller Noten entsprechend.
 
-Sprache (DE/EN/RU) wird oben im Menü gewählt.
+Sprache (DE/EN/RU) wird oben im Menü gewählt. Ganz unten im Menü: **📖 Anleitung** (diese Seite – in der App offline eingebaut) und **Projekt auf GitHub**.
 
 ## Drucken & Export
 

@@ -150,6 +150,14 @@ button{font-family:inherit}
 .pop button{border:1.5px solid var(--border);border-radius:7px;background:var(--bg);color:var(--text);font-size:13px;padding:7px 14px;cursor:pointer;font-weight:600}
 .pop button.sel{background:var(--yellow);border-color:#caa52a;color:#1A1D21}
 .k2{display:block;font-size:10.5px;font-weight:500;opacity:.8;line-height:1.2}
+/* menu footer: guide, GitHub, dedication */
+.mfoot{margin:18px 12px 10px;padding-top:12px;border-top:1.5px solid var(--border)}
+.mfoot-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.mfoot-row button,.mfoot-row .gh{border:1.5px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:12px;font-weight:600;padding:6px 10px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.glory{text-align:center;font-style:italic;font-size:12px;color:var(--text2);margin-top:16px}
+/* user guide window (app: offline copy) */
+.docs-box{max-width:820px;height:calc(100dvh - 16px);display:flex;flex-direction:column}
+.docs-box iframe{flex:1;width:100%;border:0;border-radius:8px;background:var(--bg)}
 /* circle of fifths key chooser */
 .kc-ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:60;display:flex;align-items:center;justify-content:center;padding:8px}
 .kc-ov[hidden]{display:none}
@@ -282,6 +290,15 @@ button{font-family:inherit}
       <h3 data-i18n="m.saved">Gespeicherte Lieder</h3>
       <div id="savedList" style="margin:0 12px"></div>
       <div class="mact"><button id="btnSaveSong" data-i18n="b.save">＋ Aktuelles Lied speichern</button></div>
+      <div class="mfoot">
+        <div class="mfoot-row">
+          <button id="btnHelp" data-i18n="m.help">📖 Anleitung</button>
+          <a id="ghLink" class="gh" href="https://github.com/LANIXX-HH/abcjs-online-editor" target="_blank" rel="noopener" title="GitHub">
+            <svg viewBox="0 0 16 16" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+            <span data-i18n="m.github">Projekt auf GitHub</span></a>
+        </div>
+        <div class="glory" data-i18n="m.glory">Zur Ehre Gottes geschaffen</div>
+      </div>
     </div>
     <div class="backdrop" id="backdrop"></div>
 
@@ -335,6 +352,12 @@ button{font-family:inherit}
 </div>
 <!-- key popover -->
 <div class="pop" id="keyPop"></div>
+<div class="kc-ov" id="docsOv" hidden>
+  <div class="kc-box docs-box">
+    <div class="kc-head"><b data-i18n="m.helpTitle">Anleitung</b><button class="mx" id="docsClose">✕</button></div>
+    <iframe id="docsFrame" title="Anleitung"></iframe>
+  </div>
+</div>
 <div class="kc-ov" id="kcOv" hidden>
   <div class="kc-box">
     <div class="kc-head"><b data-i18n="kc.title">Tonart wählen</b><button class="mx" id="kcClose">✕</button></div>
@@ -359,7 +382,7 @@ const $=id=>document.getElementById(id);
 
 /* ================= i18n ================= */
 const I18N={
-  de:{'m.edit':'Bearbeiten','m.drag':'Noten ziehen (Tonhöhe per Finger/Maus ändern)','kc.title':'Tonart wählen','kc.ok':'Übernehmen','kc.cancel':'Abbrechen','kc.acc0':'keine Vorzeichen','tb.lyrics':'Text','ly.add':'＋ Text','ly.free':'Freitext unter dem Stück','ly.addFree':'＋ Freitext','ly.notes':'Noten','ly.syl':'Silben','ly.under':'Text unter','ly.verse':'Zeile','ly.hint':'Silben mit - trennen, _ hält eine Silbe, * überspringt eine Note, | springt zum nächsten Takt','tb.menu':'☰ Menü','m.settings':'Einstellungen','m.song':'Lied-Info','m.title':'Titel','m.composer':'Komponist','m.meter':'Taktart','m.tempo':'Tempo (BPM)','m.unit':'Einheitslänge (L:)',
+  de:{'m.help':'📖 Anleitung','m.helpTitle':'Anleitung','m.github':'Projekt auf GitHub','m.glory':'Zur Ehre Gottes geschaffen','m.edit':'Bearbeiten','m.drag':'Noten ziehen (Tonhöhe per Finger/Maus ändern)','kc.title':'Tonart wählen','kc.ok':'Übernehmen','kc.cancel':'Abbrechen','kc.acc0':'keine Vorzeichen','tb.lyrics':'Text','ly.add':'＋ Text','ly.free':'Freitext unter dem Stück','ly.addFree':'＋ Freitext','ly.notes':'Noten','ly.syl':'Silben','ly.under':'Text unter','ly.verse':'Zeile','ly.hint':'Silben mit - trennen, _ hält eine Silbe, * überspringt eine Note, | springt zum nächsten Takt','tb.menu':'☰ Menü','m.settings':'Einstellungen','m.song':'Lied-Info','m.title':'Titel','m.composer':'Komponist','m.meter':'Taktart','m.tempo':'Tempo (BPM)','m.unit':'Einheitslänge (L:)',
     'opt.none':'— Keine —','meter.44':'4/4 – Vier Viertel','meter.34':'3/4 – Walzer','meter.24':'2/4 – Marsch','meter.68':'6/8 – Jig','meter.C':'C – Common time',
     'unit.8':'1/8 – Achtel','unit.4':'1/4 – Viertel','unit.2':'1/2 – Halbe','unit.1':'1 – Ganze',
     'm.voices':'Stimmen','m.mode':'Modus','m.single':'Einstimmig','m.multi':'Mehrstimmig (SATB)','m.vcount':'Anzahl Stimmen',
@@ -373,7 +396,7 @@ const I18N={
     'sym.newline':'⏎ Neue Zeile','sym.repstart':'|: Wdh. auf','sym.repend':':| Wdh. zu',
     'len.whole':'𝅝 Ganze','len.half':'𝅗𝅥 Halbe','len.quarter':'♩ Viertel','len.eighth':'♪ Achtel','len.sixteenth':'𝅘𝅥𝅯 Sechzehntel',
     'v.voice':'Stimme','saved.empty':'Noch nichts gespeichert.'},
-  en:{'m.edit':'Editing','m.drag':'Drag notes (change pitch with finger/mouse)','kc.title':'Choose key','kc.ok':'Apply','kc.cancel':'Cancel','kc.acc0':'no accidentals','tb.lyrics':'Lyrics','ly.add':'＋ Lyrics','ly.free':'Free text below the tune','ly.addFree':'＋ Free text','ly.notes':'notes','ly.syl':'syllables','ly.under':'Text under','ly.verse':'Line','ly.hint':'Split syllables with -, _ holds a syllable, * skips a note, | jumps to the next bar','tb.menu':'☰ Menu','m.settings':'Settings','m.song':'Song info','m.title':'Title','m.composer':'Composer','m.meter':'Meter','m.tempo':'Tempo (BPM)','m.unit':'Unit length (L:)',
+  en:{'m.help':'📖 User guide','m.helpTitle':'User guide','m.github':'Project on GitHub','m.glory':'Created to the glory of God','m.edit':'Editing','m.drag':'Drag notes (change pitch with finger/mouse)','kc.title':'Choose key','kc.ok':'Apply','kc.cancel':'Cancel','kc.acc0':'no accidentals','tb.lyrics':'Lyrics','ly.add':'＋ Lyrics','ly.free':'Free text below the tune','ly.addFree':'＋ Free text','ly.notes':'notes','ly.syl':'syllables','ly.under':'Text under','ly.verse':'Line','ly.hint':'Split syllables with -, _ holds a syllable, * skips a note, | jumps to the next bar','tb.menu':'☰ Menu','m.settings':'Settings','m.song':'Song info','m.title':'Title','m.composer':'Composer','m.meter':'Meter','m.tempo':'Tempo (BPM)','m.unit':'Unit length (L:)',
     'opt.none':'— None —','meter.44':'4/4 – Common','meter.34':'3/4 – Waltz','meter.24':'2/4 – March','meter.68':'6/8 – Jig','meter.C':'C – Common time',
     'unit.8':'1/8 – Eighth','unit.4':'1/4 – Quarter','unit.2':'1/2 – Half','unit.1':'1 – Whole',
     'm.voices':'Voices','m.mode':'Mode','m.single':'Single voice','m.multi':'Multi-voice (SATB)','m.vcount':'Number of voices',
@@ -387,7 +410,7 @@ const I18N={
     'sym.newline':'⏎ New line','sym.repstart':'|: Repeat start','sym.repend':':| Repeat end',
     'len.whole':'𝅝 Whole','len.half':'𝅗𝅥 Half','len.quarter':'♩ Quarter','len.eighth':'♪ Eighth','len.sixteenth':'𝅘𝅥𝅯 Sixteenth',
     'v.voice':'Voice','saved.empty':'Nothing saved yet.'},
-  ru:{'m.edit':'Редактирование','m.drag':'Перетаскивать ноты (менять высоту пальцем/мышью)','kc.title':'Выбор тональности','kc.ok':'Применить','kc.cancel':'Отмена','kc.acc0':'без знаков','tb.lyrics':'Текст','ly.add':'＋ Текст','ly.free':'Свободный текст под песней','ly.addFree':'＋ Свободный текст','ly.notes':'нот','ly.syl':'слогов','ly.under':'Текст под','ly.verse':'Строка','ly.hint':'Слоги через -, _ тянет слог, * пропускает ноту, | переход к следующему такту','tb.menu':'☰ Меню','m.settings':'Настройки','m.song':'О песне','m.title':'Название','m.composer':'Композитор','m.meter':'Размер','m.tempo':'Темп (BPM)','m.unit':'Базовая длит. (L:)',
+  ru:{'m.help':'📖 Инструкция','m.helpTitle':'Инструкция','m.github':'Проект на GitHub','m.glory':'Создано во славу Божию','m.edit':'Редактирование','m.drag':'Перетаскивать ноты (менять высоту пальцем/мышью)','kc.title':'Выбор тональности','kc.ok':'Применить','kc.cancel':'Отмена','kc.acc0':'без знаков','tb.lyrics':'Текст','ly.add':'＋ Текст','ly.free':'Свободный текст под песней','ly.addFree':'＋ Свободный текст','ly.notes':'нот','ly.syl':'слогов','ly.under':'Текст под','ly.verse':'Строка','ly.hint':'Слоги через -, _ тянет слог, * пропускает ноту, | переход к следующему такту','tb.menu':'☰ Меню','m.settings':'Настройки','m.song':'О песне','m.title':'Название','m.composer':'Композитор','m.meter':'Размер','m.tempo':'Темп (BPM)','m.unit':'Базовая длит. (L:)',
     'opt.none':'— Нет —','meter.44':'4/4 – Четыре четверти','meter.34':'3/4 – Вальс','meter.24':'2/4 – Марш','meter.68':'6/8 – Джига','meter.C':'C – Common time',
     'unit.8':'1/8 – Восьмая','unit.4':'1/4 – Четверть','unit.2':'1/2 – Половинная','unit.1':'1 – Целая',
     'm.voices':'Голоса','m.mode':'Режим','m.single':'Один голос','m.multi':'Многоголосие (SATB)','m.vcount':'Число голосов',
@@ -1386,6 +1409,16 @@ $('lenPop').querySelectorAll('button').forEach(b=>b.onclick=()=>{
   $('lenBtn').textContent=sym+' ▾'; closePops();
 });
 $('keyBtn').onclick=()=>{ closePops(); openKeyCircle(); };
+// user guide: app → offline copy (docs.html, built from README.md); web → README on GitHub
+const GUIDE_URL='https://github.com/LANIXX-HH/abcjs-online-editor#readme';
+$('btnHelp').onclick=()=>{
+  if(!NATIVE){ window.open(GUIDE_URL,'_blank','noopener'); return; }
+  const dark=document.documentElement.getAttribute('data-theme')==='dark';
+  $('docsFrame').src='docs.html'+(dark?'?theme=dark':'');
+  $('docsOv').hidden=false;
+};
+$('docsClose').onclick=()=>{ $('docsOv').hidden=true; };
+$('docsOv').addEventListener('click',e=>{ if(e.target===$('docsOv')) $('docsOv').hidden=true; });
 $('kcOk').onclick=kcApply; $('kcCancel').onclick=closeKeyCircle; $('kcClose').onclick=closeKeyCircle;
 $('kcOv').addEventListener('click',e=>{ if(e.target===$('kcOv')) closeKeyCircle(); });   // tap outside closes
 $('symBtn').onclick=()=>openPop($('symPop'),$('symBtn'));
