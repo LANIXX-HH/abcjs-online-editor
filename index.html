@@ -150,6 +150,8 @@ button{font-family:inherit}
 .pop button{border:1.5px solid var(--border);border-radius:7px;background:var(--bg);color:var(--text);font-size:13px;padding:7px 14px;cursor:pointer;font-weight:600}
 .pop button.sel{background:var(--yellow);border-color:#caa52a;color:#1A1D21}
 .k2{display:block;font-size:10.5px;font-weight:500;opacity:.8;line-height:1.2}
+.tune-list{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+.tune-list button{text-align:left;border:1.5px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:14px;padding:9px 12px;cursor:pointer}
 /* menu footer: guide, GitHub, dedication */
 .mfoot{margin:18px 12px 10px;padding-top:12px;border-top:1.5px solid var(--border)}
 .mfoot-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
@@ -307,6 +309,8 @@ button{font-family:inherit}
       <div class="abcpanel" id="abcPanel" hidden>
         <div class="abcpanel-head"><b data-i18n="m.abc">ABC-Code</b>
           <span class="mact" style="margin:0">
+            <button id="btnOpenFile" data-i18n="b.open" style="display:none">📂 Datei öffnen</button>
+            <input type="file" id="fileIn" accept=".abc,.txt,text/plain,text/vnd.abc,*/*" hidden>
             <button id="btnApplyAbc" data-i18n="b.apply">↻ ABC übernehmen</button>
             <button id="btnCopy" data-i18n="b.copy">Kopieren</button>
           </span></div>
@@ -352,6 +356,12 @@ button{font-family:inherit}
 </div>
 <!-- key popover -->
 <div class="pop" id="keyPop"></div>
+<div class="kc-ov" id="tuneOv" hidden>
+  <div class="kc-box">
+    <div class="kc-head"><b data-i18n="open.pick">Welches Stück?</b><button class="mx" id="tuneClose">✕</button></div>
+    <div id="tuneList" class="tune-list"></div>
+  </div>
+</div>
 <div class="kc-ov" id="docsOv" hidden>
   <div class="kc-box docs-box">
     <div class="kc-head"><b data-i18n="m.helpTitle">Anleitung</b><button class="mx" id="docsClose">✕</button></div>
@@ -382,7 +392,7 @@ const $=id=>document.getElementById(id);
 
 /* ================= i18n ================= */
 const I18N={
-  de:{'m.help':'📖 Anleitung','m.helpTitle':'Anleitung','m.github':'Projekt auf GitHub','m.glory':'Zur Ehre Gottes geschaffen','m.edit':'Bearbeiten','m.drag':'Noten ziehen (Tonhöhe per Finger/Maus ändern)','kc.title':'Tonart wählen','kc.ok':'Übernehmen','kc.cancel':'Abbrechen','kc.acc0':'keine Vorzeichen','tb.lyrics':'Text','ly.add':'＋ Text','ly.free':'Freitext unter dem Stück','ly.addFree':'＋ Freitext','ly.notes':'Noten','ly.syl':'Silben','ly.under':'Text unter','ly.verse':'Zeile','ly.hint':'Silben mit - trennen, _ hält eine Silbe, * überspringt eine Note, | springt zum nächsten Takt','tb.menu':'☰ Menü','m.settings':'Einstellungen','m.song':'Lied-Info','m.title':'Titel','m.composer':'Komponist','m.meter':'Taktart','m.tempo':'Tempo (BPM)','m.unit':'Einheitslänge (L:)',
+  de:{'b.open':'📂 Datei öffnen','open.pick':'Welches Stück?','open.err':'Datei konnte nicht gelesen werden','m.help':'📖 Anleitung','m.helpTitle':'Anleitung','m.github':'Projekt auf GitHub','m.glory':'Zur Ehre Gottes geschaffen','m.edit':'Bearbeiten','m.drag':'Noten ziehen (Tonhöhe per Finger/Maus ändern)','kc.title':'Tonart wählen','kc.ok':'Übernehmen','kc.cancel':'Abbrechen','kc.acc0':'keine Vorzeichen','tb.lyrics':'Text','ly.add':'＋ Text','ly.free':'Freitext unter dem Stück','ly.addFree':'＋ Freitext','ly.notes':'Noten','ly.syl':'Silben','ly.under':'Text unter','ly.verse':'Zeile','ly.hint':'Silben mit - trennen, _ hält eine Silbe, * überspringt eine Note, | springt zum nächsten Takt','tb.menu':'☰ Menü','m.settings':'Einstellungen','m.song':'Lied-Info','m.title':'Titel','m.composer':'Komponist','m.meter':'Taktart','m.tempo':'Tempo (BPM)','m.unit':'Einheitslänge (L:)',
     'opt.none':'— Keine —','meter.44':'4/4 – Vier Viertel','meter.34':'3/4 – Walzer','meter.24':'2/4 – Marsch','meter.68':'6/8 – Jig','meter.C':'C – Common time',
     'unit.8':'1/8 – Achtel','unit.4':'1/4 – Viertel','unit.2':'1/2 – Halbe','unit.1':'1 – Ganze',
     'm.voices':'Stimmen','m.mode':'Modus','m.single':'Einstimmig','m.multi':'Mehrstimmig (SATB)','m.vcount':'Anzahl Stimmen',
@@ -396,7 +406,7 @@ const I18N={
     'sym.newline':'⏎ Neue Zeile','sym.repstart':'|: Wdh. auf','sym.repend':':| Wdh. zu',
     'len.whole':'𝅝 Ganze','len.half':'𝅗𝅥 Halbe','len.quarter':'♩ Viertel','len.eighth':'♪ Achtel','len.sixteenth':'𝅘𝅥𝅯 Sechzehntel',
     'v.voice':'Stimme','saved.empty':'Noch nichts gespeichert.'},
-  en:{'m.help':'📖 User guide','m.helpTitle':'User guide','m.github':'Project on GitHub','m.glory':'Created to the Glory of God','m.edit':'Editing','m.drag':'Drag notes (change pitch with finger/mouse)','kc.title':'Choose key','kc.ok':'Apply','kc.cancel':'Cancel','kc.acc0':'no accidentals','tb.lyrics':'Lyrics','ly.add':'＋ Lyrics','ly.free':'Free text below the tune','ly.addFree':'＋ Free text','ly.notes':'notes','ly.syl':'syllables','ly.under':'Text under','ly.verse':'Line','ly.hint':'Split syllables with -, _ holds a syllable, * skips a note, | jumps to the next bar','tb.menu':'☰ Menu','m.settings':'Settings','m.song':'Song info','m.title':'Title','m.composer':'Composer','m.meter':'Meter','m.tempo':'Tempo (BPM)','m.unit':'Unit length (L:)',
+  en:{'b.open':'📂 Open file','open.pick':'Which tune?','open.err':'Could not read the file','m.help':'📖 User guide','m.helpTitle':'User guide','m.github':'Project on GitHub','m.glory':'Created to the Glory of God','m.edit':'Editing','m.drag':'Drag notes (change pitch with finger/mouse)','kc.title':'Choose key','kc.ok':'Apply','kc.cancel':'Cancel','kc.acc0':'no accidentals','tb.lyrics':'Lyrics','ly.add':'＋ Lyrics','ly.free':'Free text below the tune','ly.addFree':'＋ Free text','ly.notes':'notes','ly.syl':'syllables','ly.under':'Text under','ly.verse':'Line','ly.hint':'Split syllables with -, _ holds a syllable, * skips a note, | jumps to the next bar','tb.menu':'☰ Menu','m.settings':'Settings','m.song':'Song info','m.title':'Title','m.composer':'Composer','m.meter':'Meter','m.tempo':'Tempo (BPM)','m.unit':'Unit length (L:)',
     'opt.none':'— None —','meter.44':'4/4 – Common','meter.34':'3/4 – Waltz','meter.24':'2/4 – March','meter.68':'6/8 – Jig','meter.C':'C – Common time',
     'unit.8':'1/8 – Eighth','unit.4':'1/4 – Quarter','unit.2':'1/2 – Half','unit.1':'1 – Whole',
     'm.voices':'Voices','m.mode':'Mode','m.single':'Single voice','m.multi':'Multi-voice (SATB)','m.vcount':'Number of voices',
@@ -410,7 +420,7 @@ const I18N={
     'sym.newline':'⏎ New line','sym.repstart':'|: Repeat start','sym.repend':':| Repeat end',
     'len.whole':'𝅝 Whole','len.half':'𝅗𝅥 Half','len.quarter':'♩ Quarter','len.eighth':'♪ Eighth','len.sixteenth':'𝅘𝅥𝅯 Sixteenth',
     'v.voice':'Voice','saved.empty':'Nothing saved yet.'},
-  ru:{'m.help':'📖 Инструкция','m.helpTitle':'Инструкция','m.github':'Проект на GitHub','m.glory':'Создано во Славу Божию','m.edit':'Редактирование','m.drag':'Перетаскивать ноты (менять высоту пальцем/мышью)','kc.title':'Выбор тональности','kc.ok':'Применить','kc.cancel':'Отмена','kc.acc0':'без знаков','tb.lyrics':'Текст','ly.add':'＋ Текст','ly.free':'Свободный текст под песней','ly.addFree':'＋ Свободный текст','ly.notes':'нот','ly.syl':'слогов','ly.under':'Текст под','ly.verse':'Строка','ly.hint':'Слоги через -, _ тянет слог, * пропускает ноту, | переход к следующему такту','tb.menu':'☰ Меню','m.settings':'Настройки','m.song':'О песне','m.title':'Название','m.composer':'Композитор','m.meter':'Размер','m.tempo':'Темп (BPM)','m.unit':'Базовая длит. (L:)',
+  ru:{'b.open':'📂 Открыть файл','open.pick':'Какую мелодию?','open.err':'Не удалось прочитать файл','m.help':'📖 Инструкция','m.helpTitle':'Инструкция','m.github':'Проект на GitHub','m.glory':'Создано во Славу Божию','m.edit':'Редактирование','m.drag':'Перетаскивать ноты (менять высоту пальцем/мышью)','kc.title':'Выбор тональности','kc.ok':'Применить','kc.cancel':'Отмена','kc.acc0':'без знаков','tb.lyrics':'Текст','ly.add':'＋ Текст','ly.free':'Свободный текст под песней','ly.addFree':'＋ Свободный текст','ly.notes':'нот','ly.syl':'слогов','ly.under':'Текст под','ly.verse':'Строка','ly.hint':'Слоги через -, _ тянет слог, * пропускает ноту, | переход к следующему такту','tb.menu':'☰ Меню','m.settings':'Настройки','m.song':'О песне','m.title':'Название','m.composer':'Композитор','m.meter':'Размер','m.tempo':'Темп (BPM)','m.unit':'Базовая длит. (L:)',
     'opt.none':'— Нет —','meter.44':'4/4 – Четыре четверти','meter.34':'3/4 – Вальс','meter.24':'2/4 – Марш','meter.68':'6/8 – Джига','meter.C':'C – Common time',
     'unit.8':'1/8 – Восьмая','unit.4':'1/4 – Четверть','unit.2':'1/2 – Половинная','unit.1':'1 – Целая',
     'm.voices':'Голоса','m.mode':'Режим','m.single':'Один голос','m.multi':'Многоголосие (SATB)','m.vcount':'Число голосов',
@@ -1456,6 +1466,41 @@ $('playBtn').onclick=async()=>{
 
 /* ================= export + print ================= */
 const NATIVE=(typeof AndroidExport!=='undefined');
+// open an ABC file from the device / Google Drive (app only: Android document picker)
+function splitTunes(text){
+  const lines=text.replace(/\r\n?/g,'\n').split('\n');
+  const starts=[]; lines.forEach((l,i)=>{ if(/^X:/.test(l)) starts.push(i); });
+  if(starts.length<=1) return [text];
+  const fileHead=lines.slice(0,starts[0]).filter(l=>/^%/.test(l));   // %%-directives before the first tune apply to all
+  return starts.map((s,k)=>{
+    const part=lines.slice(s, k+1<starts.length? starts[k+1] : lines.length);
+    while(part.length && /^\s*$/.test(part[part.length-1])) part.pop();
+    return fileHead.concat(part).join('\n');
+  });
+}
+function loadFileText(text){
+  const tunes=splitTunes(text);
+  if(tunes.length===1){ loadAbc(tunes[0]); return; }
+  const list=$('tuneList'); list.innerHTML='';
+  tunes.forEach((tu,k)=>{
+    const tm=tu.match(/^T:(.*)$/m);
+    const b=document.createElement('button'); b.textContent=(k+1)+'. '+(tm? tm[1].trim() : '—');
+    b.onclick=()=>{ $('tuneOv').hidden=true; loadAbc(tu); };
+    list.appendChild(b);
+  });
+  $('tuneOv').hidden=false;
+}
+if(NATIVE) $('btnOpenFile').style.display='';
+$('btnOpenFile').onclick=()=>{ $('fileIn').value=''; $('fileIn').click(); };
+$('fileIn').onchange=()=>{
+  const f=$('fileIn').files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>loadFileText(String(r.result||''));
+  r.onerror=()=>alert(t('open.err'));
+  r.readAsText(f);                                  // UTF-8
+};
+$('tuneClose').onclick=()=>{ $('tuneOv').hidden=true; };
+$('tuneOv').addEventListener('click',e=>{ if(e.target===$('tuneOv')) $('tuneOv').hidden=true; });
 function buildPrintHtml(withAutoPrint){
   const title=$('fTitle').value||'Noten';
   const tmp=document.createElement('div');

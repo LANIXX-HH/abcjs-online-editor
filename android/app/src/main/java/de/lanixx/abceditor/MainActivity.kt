@@ -5,6 +5,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
@@ -14,6 +15,7 @@ import android.provider.MediaStore
 import android.util.Base64
 import android.webkit.JavascriptInterface
 import android.webkit.PermissionRequest
+import android.webkit.ValueCallback
 import android.webkit.WebResourceRequest
 import android.webkit.WebChromeClient
 import android.webkit.WebView
@@ -40,6 +42,16 @@ class MainActivity : AppCompatActivity() {
         if (req != null) {
             if (granted) req.grant(req.resources) else req.deny()
         }
+    }
+
+    // "Open file" in the editor: Android's document picker (device storage, Downloads, Google Drive, other clouds).
+    private var fileCallback: ValueCallback<Array<Uri>>? = null
+    private val openDocLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        val cb = fileCallback
+        fileCallback = null
+        cb?.onReceiveValue(if (uri != null) arrayOf(uri) else null)   // null = cancelled, the page must be told
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -76,6 +88,24 @@ class MainActivity : AppCompatActivity() {
                         pendingPermissionRequest = request
                         micPermLauncher.launch(Manifest.permission.RECORD_AUDIO)
                     }
+                }
+            }
+
+            // <input type="file"> in the page → Android document picker
+            override fun onShowFileChooser(
+                view: WebView,
+                callback: ValueCallback<Array<Uri>>,
+                params: FileChooserParams
+            ): Boolean {
+                fileCallback?.onReceiveValue(null)
+                fileCallback = callback
+                return try {
+                    openDocLauncher.launch(arrayOf("*/*"))   // .abc files have no reliable MIME type
+                    true
+                } catch (e: Exception) {
+                    fileCallback = null
+                    callback.onReceiveValue(null)
+                    false
                 }
             }
         }
