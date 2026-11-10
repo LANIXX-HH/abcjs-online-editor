@@ -23,7 +23,7 @@ Web-Version und App funktionieren gleich. Die App läuft komplett offline; die W
 | **Rechts** | Klaviatur zum Eingeben, darüber/darunter die Werkzeuge |
 | **Menü** | Einstellungen, Stimmen, Export, Vorlagen, gespeicherte Lieder, Sprache |
 
-Auf dem Handy öffnet ☰ das Menü als Seitenleiste; am Computer ist es immer sichtbar.
+☰ öffnet das Menü als Seitenleiste – auf Handy und Computer gleich, damit das Notenbild die volle Breite hat.
 
 ## Noten eingeben
 

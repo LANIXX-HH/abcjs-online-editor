@@ -78,7 +78,6 @@ button{font-family:inherit}
 .app.lyrmode #micBtn{opacity:.35;pointer-events:none}
 .app.lyrmode .kbd,.app.lyrmode #hint{display:none}          /* no note input in the lyrics layer → full width for music + text */
 .app.lyrmode .body{grid-template-columns:1fr}
-@media(min-width:780px){ .app.lyrmode .body{grid-template-columns:320px 1fr} }
 .lyr-sys{margin:0 0 16px;padding:6px 8px 8px;border-left:3px solid var(--blue);background:var(--bg-page);border-radius:0 6px 6px 0}
 .lyr-staff{margin-top:4px}
 .lyr-staff>b{display:block;font-size:11px;color:var(--text2);margin:2px 0}
@@ -186,14 +185,9 @@ button{font-family:inherit}
 .kc-act button{border:1.5px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:14px;font-weight:600;padding:8px 14px;cursor:pointer}
 .kc-act .kc-ok{background:var(--blue);border-color:var(--blue);color:#fff}
 
-/* desktop */
+/* desktop: same menu drawer as on mobile (☰), so the score gets the full width */
 @media(min-width:780px){
-  .body{grid-template-columns:320px 1fr 150px}
-  .menu{position:static;transform:none;box-shadow:none;width:auto;max-width:none}
-  .app.menu-open .menu,.menu{transform:none}
-  .backdrop{display:none}
-  .menu-toggle-wrap{display:none}
-  #menuClose{display:none}   /* menu is always open on desktop – keep the header (language switch), hide only ✕ */
+  .body{grid-template-columns:1fr 150px}
 }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/abcjs@6.4.3/dist/abcjs-basic-min.js"></script>
