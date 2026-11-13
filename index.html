@@ -932,10 +932,16 @@ function render(fromButtons){
   }, 60);
 }
 function locAtChar(startChar){
-  for(const r of lastMap){ if(startChar>=r.start && startChar<r.end) return r; }
+  // abcjs counts what precedes a note as part of it – slur "(", tuplet "(3", chord symbol, decoration,
+  // grace notes: the element then starts on such a raw token, so take the note that follows it
+  const toNote=k=>{ const r=lastMap[k]; if(r.kind!=='raw') return r;
+    for(let j=k+1;j<lastMap.length && lastMap[j].v===r.v;j++){ const q=lastMap[j];
+      if(q.kind==='note'||q.kind==='rest') return q; if(q.kind!=='raw') break; }
+    return r; };
+  for(let k=0;k<lastMap.length;k++){ const r=lastMap[k]; if(startChar>=r.start && startChar<r.end) return toNote(k); }
   // abcjs may count the space(s) before a note as part of it (e.g. "[V:1] E2"): take the token right after
   const src=$('abcTa').value;
-  for(const r of lastMap){ if(r.start>startChar && /^\s+$/.test(src.slice(startChar,r.start))) return r; }
+  for(let k=0;k<lastMap.length;k++){ const r=lastMap[k]; if(r.start>startChar && /^\s+$/.test(src.slice(startChar,r.start))) return toNote(k); }
   return null;
 }
 function onNoteClick(abcElem, tn, classes, analysis, drag, ev){
