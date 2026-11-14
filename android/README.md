@@ -13,6 +13,7 @@ Die installierte Version steht im Menü neben „Einstellungen“.
 ## Was die App zusätzlich kann
 
 - **ABC-Datei öffnen:** im ABC-Code (`</>`) → 📂 Datei öffnen. Der Android-Dateiauswahldialog zeigt das Gerät und – wenn die Drive-App installiert ist – Google Drive.
+- **„Öffnen mit“ / „Teilen“:** `.abc`-Dateien im Dateimanager antippen → *ABC-Editor* wählen (mit „Immer“ wird er Standard). Auch aus Google Drive, WhatsApp oder Mail über *Teilen*. Mehrere Stücke in einer Datei → Auswahl.
 - **Noten drucken** über den Android-Druckdienst (auch „Als PDF speichern“).
 - **MIDI-** und **MP3-Export** – Dateien landen unter *Downloads*.
 - **Anleitung offline:** Menü → 📖 Anleitung zeigt die Bedienungsanleitung ohne Internet (wird beim Build aus `README.md` erzeugt).

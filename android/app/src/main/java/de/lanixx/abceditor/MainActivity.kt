@@ -33,6 +33,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var web: WebView
     private var pendingPermissionRequest: PermissionRequest? = null
     private var printWeb: WebView? = null  // kept alive while a print job spins up
+    private var pageReady = false
+    private var pendingAbc: String? = null  // file from "Öffnen mit"/"Teilen", delivered once the page has loaded
 
     private val micPermLauncher = registerForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
@@ -120,6 +122,13 @@ class MainActivity : AppCompatActivity() {
                 }
                 return false
             }
+
+            override fun onPageFinished(view: WebView, url: String?) {
+                if (url?.endsWith("index.html") == true) {
+                    pageReady = true
+                    pendingAbc?.let { pendingAbc = null; deliverAbc(it) }
+                }
+            }
         }
 
         // Export buttons (MIDI / WAV / ABC) produce data: or blob: URLs.
@@ -146,6 +155,7 @@ class MainActivity : AppCompatActivity() {
         web.addJavascriptInterface(ExportBridge(), "AndroidExport")
 
         web.loadUrl("file:///android_asset/index.html")
+        handleOpenIntent(intent)
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -154,6 +164,49 @@ class MainActivity : AppCompatActivity() {
                 if (web.canGoBack()) web.goBack() else moveTaskToBack(true)
             }
         })
+    }
+
+    // App already running (singleTask): a new "Öffnen mit" arrives here
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleOpenIntent(intent)
+    }
+
+    // "Öffnen mit" (VIEW) or "Teilen" (SEND): read the file as UTF-8 text and load it into the editor
+    private fun handleOpenIntent(intent: Intent?) {
+        if (intent == null) return
+        val text: String? = try {
+            when (intent.action) {
+                Intent.ACTION_VIEW -> intent.data?.let { readUri(it) }
+                Intent.ACTION_SEND -> {
+                    @Suppress("DEPRECATION")
+                    val uri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+                    if (uri != null) readUri(uri) else intent.getStringExtra(Intent.EXTRA_TEXT)
+                }
+                else -> null
+            }
+        } catch (e: Exception) {
+            Toast.makeText(this, "Datei konnte nicht gelesen werden: ${e.message}", Toast.LENGTH_LONG).show()
+            null
+        }
+        if (text.isNullOrBlank()) return
+        if (!text.contains("K:") && !text.contains("X:")) {
+            Toast.makeText(this, "Keine ABC-Noten in der Datei", Toast.LENGTH_LONG).show()
+            return
+        }
+        if (pageReady) deliverAbc(text) else pendingAbc = text
+    }
+
+    private fun readUri(uri: Uri): String? =
+        contentResolver.openInputStream(uri)?.use { input ->
+            val bytes = input.readBytes()
+            if (bytes.size > 2_000_000) throw IllegalStateException("Datei zu groß")
+            String(bytes, Charsets.UTF_8).removePrefix("\uFEFF")   // drop a UTF-8 BOM
+        }
+
+    private fun deliverAbc(text: String) {
+        web.evaluateJavascript("loadFileText(" + org.json.JSONObject.quote(text) + ")", null)
     }
 
     inner class ExportBridge {
