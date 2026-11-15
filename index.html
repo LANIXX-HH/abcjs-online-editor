@@ -1584,6 +1584,14 @@ $('lenPop').querySelectorAll('button').forEach(b=>b.onclick=()=>{
   $('lenPop').querySelectorAll('button').forEach(x=>x.classList.toggle('sel',x===b));
   const sym={'4':'𝅝','2':'𝅗𝅥','1':'♩','/':'♪','//':'𝅘𝅥𝅯'}[state.len]||'♩';
   $('lenBtn').textContent=sym+' ▾'; closePops();
+  // a note is selected → it gets the new length too (only the length suffix changes; pitch spelling,
+  // accidentals and a tie "-" stay exactly as written)
+  syncFromText();
+  const v=AV(), tk=v.sel>=0 && v.tokens[v.sel];
+  if(tk && tk.kind==='note'){
+    const m=tk.t.match(/^([_^=]*[A-Ga-g][,']*)([0-9\/]*)(.*)$/s);
+    if(m){ const dur=LEN_Q[state.len]||1; tk.t=m[1]+durSuffix(dur)+m[3]; tk.dur=dur; render(true); }
+  }
 });
 $('keyBtn').onclick=()=>{ closePops(); openKeyCircle(); };
 // user guide: app → offline copy (docs.html, built from README.md); web → README on GitHub

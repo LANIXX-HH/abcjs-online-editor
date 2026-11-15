@@ -33,7 +33,7 @@ Web-Version und App funktionieren gleich. Die App läuft komplett offline; die W
 - Taste antippen = Note wird eingefügt und erklingt. Auch Töne ohne Punkt sind wählbar.
 
 ### Werkzeuge
-- **Länge** (gelber Knopf ♩ ▾): Ganze, Halbe, Viertel, Achtel, Sechzehntel – bezogen auf die Einheitslänge (siehe Einstellungen).
+- **Länge** (gelber Knopf ♩ ▾): Ganze, Halbe, Viertel, Achtel, Sechzehntel – bezogen auf die Einheitslänge (siehe Einstellungen). Ist eine Note ausgewählt, bekommt sie die neue Länge sofort.
 - **Zeichen ▾:** neue Zeile, Wiederholung auf `|:`, Wiederholung zu `:|`.
 - **Pause**, **Takt |**, **⌫ Löschen** (löscht vor der Einfügemarke).
 
