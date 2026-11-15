@@ -77,7 +77,8 @@ Erneut **Text** antippen kehrt zur Noteneingabe zurück.
 
 ## ABC-Code
 **`</>`** blendet den ABC-Code über dem Notenbild ein:
-- direkt bearbeiten, mit **↻ ABC übernehmen** übernehmen; **Kopieren** kopiert ihn.
+- direkt bearbeiten; **Kopieren** kopiert ihn. Änderungen im Code werden automatisch übernommen, sobald man im Noten-Editor weiterarbeitet (Klaviatur, Note antippen/ziehen, Menü). **↻ ABC übernehmen** liest sofort ein.
+- **Note und Code verbunden:** Note im Notenbild antippen → sie wird im Code rot markiert. Cursor im Code auf, vor oder direkt hinter eine Note setzen (auch mit den Pfeiltasten) → die Note ist im Notenbild ausgewählt und die Klaviatur schreibt dort weiter.
 - Eigener ABC-Code (z. B. aus anderen Programmen) kann hier eingefügt werden. Alles, was der Editor nicht selbst bearbeitet – Liedtext, Bögen, Akkorde, Verzierungen, Kommentare, Halsrichtung usw. –, bleibt unverändert erhalten.
 - **📂 Datei öffnen** (nur App): `.abc`-/Textdatei vom Gerät oder aus Google Drive laden. Enthält die Datei mehrere Stücke (`X:`), wählt man eines aus.
 - Leerzeilen innerhalb eines Stücks werden zu `%` (in ABC beendet eine Leerzeile sonst das Stück).

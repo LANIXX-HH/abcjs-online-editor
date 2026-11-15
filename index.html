@@ -138,7 +138,12 @@ button{font-family:inherit}
 .abcpanel{background:var(--bg);border:1.5px solid var(--border);border-radius:8px;padding:8px;margin-bottom:8px}
 .abcpanel[hidden]{display:none}
 .abcpanel-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px;font-size:13px}
-#abcTa{display:block;width:100%;height:140px;border:1.5px solid var(--border);border-radius:8px;padding:8px;font-family:ui-monospace,monospace;font-size:12px;resize:vertical;background:var(--bg-page);color:var(--text)}
+#abcTa{display:block;position:relative;width:100%;height:140px;border:1.5px solid var(--border);border-radius:8px;padding:8px;font-family:ui-monospace,monospace;font-size:12px;line-height:1.35;resize:vertical;background:transparent;color:var(--text);overflow-y:scroll;white-space:pre-wrap;overflow-wrap:break-word}
+/* highlight layer behind the code field: marks a note without focusing the field (no phone keyboard) */
+.ta-wrap{position:relative;background:var(--bg-page);border-radius:8px}
+#abcMirror{position:absolute;inset:0;border:1.5px solid transparent;padding:8px;font-family:ui-monospace,monospace;font-size:12px;line-height:1.35;white-space:pre-wrap;overflow-wrap:break-word;overflow-y:scroll;color:transparent;pointer-events:none;scrollbar-color:transparent transparent}
+#abcMirror::-webkit-scrollbar{background:transparent}
+#abcMirror mark{background:rgba(224,40,30,.35);color:transparent;border-radius:2px}
 .mact{display:flex;gap:6px;flex-wrap:wrap;margin:0 12px 14px}
 .mact button{border:1.5px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:12px;font-weight:600;padding:6px 10px;cursor:pointer}
 .tb-btn.on{background:var(--blue);border-color:var(--blue);color:#fff}
@@ -312,7 +317,7 @@ button{font-family:inherit}
             <button id="btnApplyAbc" data-i18n="b.apply">↻ ABC übernehmen</button>
             <button id="btnCopy" data-i18n="b.copy">Kopieren</button>
           </span></div>
-        <textarea id="abcTa" spellcheck="false"></textarea>
+        <div class="ta-wrap"><div id="abcMirror" aria-hidden="true"></div><textarea id="abcTa" spellcheck="false"></textarea></div>
       </div>
       <span id="hint" data-i18n="hint">Tippe rechts eine Note · Grundton unten (rot)</span>
       <div id="paper"></div>
@@ -575,7 +580,10 @@ function setVName(raw,name){ const q='name="'+name.replace(/"/g,'')+'"'; return 
 function vAttr(raw,key){ const m=raw.match(new RegExp('\\b'+key+'=("[^"]*"|\\S+)')); return m? m[1].replace(/^"|"$/g,'') : ''; }
 const DEFAULT_ABC='X:1\nT:Mein Lied\nM:4/4\nL:1/4\nQ:120\nK:C';
 // parse a full ABC string into the document model; returns true on success
-function loadAbc(abc){
+const uiSigNow=()=>JSON.stringify([state.voiceMode,state.voiceCount,state.activeVoice,state.key,state.voices.map(v=>[v.name,v.clef])]);
+function loadAbc(abc, opts){
+  opts=opts||{};
+  const prevActive=state.activeVoice, keysTop=$('keysScroll').scrollTop, uiBefore=uiSigNow();
   try{
     const lines=abc.replace(/\r\n?/g,'\n').split('\n');
     // ---- header: everything up to and including the first K: line
@@ -662,13 +670,20 @@ function loadAbc(abc){
       for(const cand of [prev,'pairs','sa','single']){ state.grouping=cand; if(norm(scoreSpec(nAct))===norm(sp)){ g=cand; break; } } }
     state.grouping=g;
     state.doc={head,layout,loaded:{T:fileT,C:fileC,M:fileM,L:fileL,Q:fileQ,key:keyAbc(state.key),clef0:state.voices[0].clef,grouping:state.grouping}};
-    state.activeVoice=0;
+    state.activeVoice = (opts.quiet && prevActive<nActive()) ? prevActive : 0;   // automatic take-over keeps the voice
     $('fVoiceMode').value=state.voiceMode; $('fVoiceCount').value=String(state.voiceCount); $('fGroup').value=state.grouping;
     setKeyBtn();
     $('voiceCountRow').hidden=(state.voiceMode!=='multi');
     $('groupRow').hidden=(state.voiceMode!=='multi');
     $('clefRow').hidden=(state.voiceMode==='multi');
-    buildVoicebar(); buildVoiceEditors(); buildKeyboard(); scrollToRoot(); render(true);
+    // automatic take-over: rebuild tabs/menu/keyboard only if voices or key changed – otherwise the
+    // key or tab the user is just tapping would be replaced before its click arrives
+    if(!opts.quiet || uiSigNow()!==uiBefore){ buildVoicebar(); buildVoiceEditors(); buildKeyboard();
+      if(opts.quiet) $('keysScroll').scrollTop=keysTop; else scrollToRoot(); }
+    // automatic take-over: if the text comes out unchanged, the score on screen already shows it →
+    // no re-render (keeps a drag that is just starting on the current score alive)
+    if(opts.quiet && fullAbc()===abc) return true;
+    render(true);
     return true;
   }catch(e){ console.warn('loadAbc',e); return false; }
 }
@@ -913,11 +928,12 @@ function scoreSpec(n){
   let parts=[]; for(let i=0;i<n;i+=2){ if(i+1<n) parts.push('('+id(i)+' '+id(i+1)+')'); else parts.push(id(i)); }
   return '{'+parts.join(' ')+'}';
 }
-let rt=null;
+let rt=null, renderedText=null;   // renderedText: ABC the score on screen was drawn from
 function render(fromButtons){
   if(fromButtons){ $('abcTa').value=fullAbc(); }
   clearTimeout(rt);
   rt=setTimeout(()=>{
+    if(markedText!==null && markedText!==$('abcTa').value) clearCodeMark();
     if(state.lyricMode){ try{ renderLyricLayer(true); }catch(e){ console.warn(e); } return; }   // lyrics layer has its own view
     try{
       const arr=ABCJS.renderAbc('paper', $('abcTa').value, {
@@ -926,7 +942,7 @@ function render(fromButtons){
         visualTranspose: state.transpose||0,
         clickListener:onNoteClick
       });
-      visualObj=arr&&arr[0];
+      visualObj=arr&&arr[0]; renderedText=$('abcTa').value;
       $('paper').classList.toggle('multi', state.voiceMode==='multi');
       paintSelection();
       setupPlayer();
@@ -946,16 +962,64 @@ function locAtChar(startChar){
   for(let k=0;k<lastMap.length;k++){ const r=lastMap[k]; if(r.start>startChar && /^\s+$/.test(src.slice(startChar,r.start))) return toNote(k); }
   return null;
 }
+// ABC code typed but not taken over yet → take it over now (before any action in the note editor).
+// Returns false if the take-over changed the text (e.g. blank line → %), so old positions are invalid.
+function syncFromText(){
+  if(state.lyricMode || !state.doc) return true;
+  const txt=$('abcTa').value;
+  if(txt===fullAbc()) return true;
+  loadAbc(txt,{quiet:true});
+  return $('abcTa').value===txt && renderedText===txt;
+}
+// note → code: select the note's text in the open ABC panel and scroll it into view (no focus → no phone keyboard)
+const escHtml=x=>x.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+let markedText=null;   // code text the mark belongs to; a changed text clears the mark
+function setCodeMark(start,end){
+  const ta=$('abcTa'), v=ta.value, mi=$('abcMirror');
+  mi.innerHTML=escHtml(v.slice(0,start))+'<mark>'+escHtml(v.slice(start,end))+'</mark>'+escHtml(v.slice(end))+'\n';
+  markedText=v; mi.scrollTop=ta.scrollTop;
+}
+function clearCodeMark(){ if(markedText!==null){ $('abcMirror').textContent=''; markedText=null; } }
+function showInCode(start,end){
+  if($('abcPanel').hidden) return;
+  const ta=$('abcTa');
+  if(document.activeElement===ta){ try{ ta.setSelectionRange(start,end); }catch(e){} }   // field in use: real selection
+  setCodeMark(start,end);
+  // real position incl. wrapped lines, measured on the highlight layer
+  const mk=$('abcMirror').querySelector('mark'); if(!mk) return;
+  const top=mk.offsetTop, lh=mk.offsetHeight||16, h=ta.clientHeight;
+  if(top<ta.scrollTop || top+lh>ta.scrollTop+h-8) ta.scrollTop=Math.max(0, top-h/3);
+  $('abcMirror').scrollTop=ta.scrollTop;
+}
+// code → note: caret on/inside/right after a note in the ABC code selects that note in the score
+function selectFromCode(){
+  if(state.lyricMode || $('abcPanel').hidden) return;
+  const ta=$('abcTa'); clearCodeMark();
+  if(ta.value!==fullAbc() && !syncFromText()) return;
+  const pos=ta.selectionStart;
+  let hit=null;
+  for(const r of lastMap){ if(r.kind!=='note') continue;
+    if(pos>=r.start && pos<r.end){ hit=r; break; }      // caret before/inside the note
+    if(pos===r.end) hit=r; }                              // caret directly after it
+  if(!hit) return;
+  if(hit.v!==state.activeVoice && state.voiceMode==='multi') setActiveVoice(hit.v);
+  const vo=state.voices[hit.v]; vo.sel=hit.i; vo.cursor=hit.i+1; playFrom={v:hit.v,i:hit.i};
+  paintSelection();
+}
 function onNoteClick(abcElem, tn, classes, analysis, drag, ev){
   if(abcElem.startChar==null) return;
+  // character positions are only valid if the score shows the current text and the model matches it
+  if(renderedText!==$('abcTa').value || !syncFromText()) return;
   const loc=locAtChar(abcElem.startChar);
   if(!loc) return;
   const vo=state.voices[loc.v], tk=vo.tokens[loc.i];
-  if(drag && drag.step && vo.sel>=0 && vo.tokens[vo.sel] && vo.tokens[vo.sel].kind==='note'){
-    changePitch(loc.v, vo.sel, -drag.step); return;   // abcjs: ziehen nach unten → tiefer
+  if(drag && drag.step){
+    // move the note that is dragged (before: the previously selected one)
+    if(tk && tk.kind==='note'){ vo.sel=loc.i; vo.cursor=loc.i+1; changePitch(loc.v, loc.i, -drag.step); }   // abcjs: ziehen nach unten → tiefer
+    return;
   }
   if(loc.v!==state.activeVoice && state.voiceMode==='multi'){ setActiveVoice(loc.v); }
-  if(tk && tk.kind==='note'){ vo.sel=loc.i; vo.cursor=loc.i+1; playFrom={v:loc.v,i:loc.i}; playMidi(tk.midi); paintSelection(); }
+  if(tk && tk.kind==='note'){ vo.sel=loc.i; vo.cursor=loc.i+1; playFrom={v:loc.v,i:loc.i}; playMidi(tk.midi); paintSelection(); showInCode(loc.start, loc.end); }
 }
 function paintSelection(){
   const paper=$('paper');
@@ -1333,9 +1397,9 @@ const cursorControl={
     if(!ev) return;
     clearHighlight();
     if(ev.elements) ev.elements.forEach(arr=>{ if(Array.isArray(arr)) arr.forEach(el=>{ if(el) el.classList.add('abcjs-highlight'); }); else if(arr) arr.classList.add('abcjs-highlight'); });
-    if(ev.startChar!=null && !$('abcPanel').hidden){ try{ $('abcTa').setSelectionRange(ev.startChar, ev.endChar); }catch(e){} }
+    if(ev.startChar!=null && !$('abcPanel').hidden) showInCode(ev.startChar, ev.endChar);
   },
-  onFinished(){ clearHighlight(); playing=false; setPlayIcon(); }   // abcjs resets isStarted itself
+  onFinished(){ clearHighlight(); clearCodeMark(); playing=false; setPlayIcon(); }   // abcjs resets isStarted itself
 };
 // Like the old editor's buildPlayer(): a NEW SynthController after every render.
 // (Re-using one controller does not work: abcjs keeps "isLoaded" after the first play
@@ -1495,7 +1559,12 @@ $('fVoiceCount').addEventListener('change',()=>{ restructure('multi', parseInt($
 $('fGroup').addEventListener('change',()=>{ state.grouping=$('fGroup').value; render(true); });
 $('fTranspose').addEventListener('change',()=>{ state.transpose=parseInt($('fTranspose').value)||0; render(false); });
 $('fUnit').addEventListener('change',()=>{ state.unitLen=$('fUnit').value; render(true); });   // only L: changes, notes stay as written
-$('abcTa').addEventListener('input',()=>{ render(false); });
+$('abcTa').addEventListener('input',()=>{ clearCodeMark(); render(false); });
+$('abcTa').addEventListener('scroll',()=>{ $('abcMirror').scrollTop=$('abcTa').scrollTop; });
+// any action outside the ABC panel first takes over typed ABC code (capture phase: before the action itself)
+document.addEventListener('pointerdown',e=>{ if(!(e.target.closest && e.target.closest('#abcPanel'))) syncFromText(); },true);
+$('abcTa').addEventListener('click',selectFromCode);
+$('abcTa').addEventListener('keyup',e=>{ if(/^(Arrow|Home|End|Page)/.test(e.key)) selectFromCode(); });
 $('btnCopy').onclick=()=>{ navigator.clipboard&&navigator.clipboard.writeText($('abcTa').value); };
 $('btnAbc').onclick=()=>{ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([$('abcTa').value],{type:'text/plain'}));a.download=($('fTitle').value||'lied')+'.abc';a.click(); };
 
