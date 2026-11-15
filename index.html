@@ -143,10 +143,11 @@ button{font-family:inherit}
 .abcpanel{background:var(--bg);border:1.5px solid var(--border);border-radius:8px;padding:8px;margin-bottom:8px}
 .abcpanel[hidden]{display:none}
 .abcpanel-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px;font-size:13px}
-#abcTa{display:block;position:relative;width:100%;height:140px;border:1.5px solid var(--border);border-radius:8px;padding:8px;font-family:ui-monospace,monospace;font-size:12px;line-height:1.35;resize:vertical;background:transparent;color:var(--text);overflow-y:scroll;white-space:pre-wrap;overflow-wrap:break-word}
+#abcTa{display:block;position:relative;width:100%;height:140px;border:1.5px solid var(--border);border-radius:8px;padding:8px;font-family:ui-monospace,monospace;font-size:12px;line-height:1.35;resize:vertical;background:transparent;color:var(--text);overflow-y:scroll;white-space:pre-wrap;overflow-wrap:break-word;-webkit-text-size-adjust:none;text-size-adjust:none}
 /* highlight layer behind the code field: marks a note without focusing the field (no phone keyboard) */
 .ta-wrap{position:relative;background:var(--bg-page);border-radius:8px}
-#abcMirror{position:absolute;inset:0;border:1.5px solid transparent;padding:8px;font-family:ui-monospace,monospace;font-size:12px;line-height:1.35;white-space:pre-wrap;overflow-wrap:break-word;overflow-y:scroll;color:transparent;pointer-events:none;scrollbar-color:transparent transparent}
+#abcMirror{position:absolute;inset:0;border:1.5px solid transparent;padding:8px;font-family:ui-monospace,monospace;font-size:12px;line-height:1.35;white-space:pre-wrap;overflow-wrap:break-word;overflow-y:scroll;color:transparent;pointer-events:none;scrollbar-color:transparent transparent;-webkit-text-size-adjust:none;text-size-adjust:none}
+/* ↑ text-size-adjust:none on both: Android's font-size setting must not enlarge only one of the two → same line breaks */
 #abcMirror::-webkit-scrollbar{background:transparent}
 /* chosen text font: score text (lyrics, title …; note heads are drawn, unaffected) and the text fields */
 body.custom-font :is(#paper,#lyrOff,.font-scope) svg :is(text,tspan){font-family:var(--score-font)!important}
@@ -999,13 +1000,16 @@ function setCodeMark(start,end){
   const ta=$('abcTa'), v=ta.value, mi=$('abcMirror');
   mi.innerHTML=escHtml(v.slice(0,start))+'<mark>'+escHtml(v.slice(start,end))+'</mark>'+escHtml(v.slice(end))+'\n';
   markedText=v; mi.scrollTop=ta.scrollTop;
+  // safety net: if the layer breaks lines differently from the field, a mark would sit on the wrong text → no mark
+  if(Math.abs(mi.scrollHeight-ta.scrollHeight)>4){ mi.textContent=''; markedText=null; return false; }
+  return true;
 }
 function clearCodeMark(){ if(markedText!==null){ $('abcMirror').textContent=''; markedText=null; } }
 function showInCode(start,end){
   if($('abcPanel').hidden) return;
   const ta=$('abcTa');
   if(document.activeElement===ta){ try{ ta.setSelectionRange(start,end); }catch(e){} }   // field in use: real selection
-  setCodeMark(start,end);
+  if(!setCodeMark(start,end)){ try{ ta.setSelectionRange(start,end); }catch(e){} return; }
   // real position incl. wrapped lines, measured on the highlight layer
   const mk=$('abcMirror').querySelector('mark'); if(!mk) return;
   const top=mk.offsetTop, lh=mk.offsetHeight||16, h=ta.clientHeight;
