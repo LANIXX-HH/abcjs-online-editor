@@ -278,6 +278,12 @@ body.custom-font :is(#fTitle,#fComposer,#abcTa,#abcMirror,#paper input){font-fam
         <select id="micRange"><option value="auto" data-i18n="m.range.auto">Automatisch</option><option value="low" data-i18n="m.range.low">Tief (Bass/Tenor)</option><option value="mid" data-i18n="m.range.mid">Mittel</option><option value="high" data-i18n="m.range.high">Hoch (Sopran)</option></select></div>
       <div class="mrow"><label data-i18n="m.gate">Empfindlichkeit (Pegel-Schwelle)</label>
         <input id="micGate" type="range" min="2" max="40" value="10"></div>
+      <div class="mrow"><label><span data-i18n="m.react">Reaktion – Ton muss so lange gleich bleiben</span>: <b id="micReactV"></b></label>
+        <input id="micReact" type="range" min="40" max="400" step="20"></div>
+      <div class="mrow"><label><span data-i18n="m.smooth">Glättung (Messungen)</span>: <b id="micSmoothV"></b></label>
+        <input id="micSmooth" type="range" min="1" max="15" step="2"></div>
+      <div class="mrow"><label><input type="checkbox" id="micScale" style="width:auto;margin-right:6px"><span data-i18n="m.micScale">Nur Töne der Tonart</span></label></div>
+      <div class="mrow"><label><input type="checkbox" id="micTune" style="width:auto;margin-right:6px"><span data-i18n="m.micTune">Stimmung ausgleichen (zu hoch/zu tief gesungen)</span></label></div>
       <div class="mrow"><label><input type="checkbox" id="micDsp" style="width:auto;margin-right:6px"><span data-i18n="m.dsp">Browser-Rauschunterdrückung</span></label></div>
       <h3 data-i18n="m.edit">Bearbeiten</h3>
       <div class="mrow"><label><input type="checkbox" id="fDrag" style="width:auto;margin-right:6px"><span data-i18n="m.drag">Noten ziehen (Tonhöhe per Finger/Maus ändern)</span></label></div>
@@ -424,6 +430,7 @@ const I18N={
     'm.group':'Bündelung der Systeme','m.group.single':'Jede Stimme einzeln','m.group.pairs':'Paarweise (1+2, 3+4)','m.group.sa':'1+2 zusammen, Rest einzeln',
     'm.lyrics':'Liedtext','m.transpose':'Transponieren (nur Ansicht)',
     'm.mic':'Mikrofon (Singen → Noten)','m.range':'Stimmlage','m.range.auto':'Automatisch','m.range.low':'Tief (Bass/Tenor)','m.range.mid':'Mittel','m.range.high':'Hoch (Sopran)',
+    'm.react':'Reaktion – Ton muss so lange gleich bleiben','m.smooth':'Glättung (Messungen)','m.micScale':'Nur Töne der Tonart','m.micTune':'Stimmung ausgleichen (zu hoch/zu tief gesungen)',
     'm.gate':'Empfindlichkeit (Pegel-Schwelle)','m.dsp':'Browser-Rauschunterdrückung','m.display':'Darstellung','m.displayhint':'(ändert Noten nicht)',
     'm.clef':'Notenschlüssel','m.clef.treble':'Violin','m.clef.bass':'Bass','m.clef.alto':'Alt','m.abc':'ABC-Code','m.templates':'Vorlagen','m.saved':'Gespeicherte Lieder',
     'b.apply':'↻ ABC übernehmen','b.copy':'Kopieren','b.print':'🖨 PDF-Vorschau','b.printNative':'🖨 Noten drucken','b.save':'＋ Aktuelles Lied speichern',
@@ -438,6 +445,7 @@ const I18N={
     'm.group':'Staff bundling','m.group.single':'Each voice separate','m.group.pairs':'In pairs (1+2, 3+4)','m.group.sa':'1+2 together, rest separate',
     'm.lyrics':'Lyrics','m.transpose':'Transpose (view only)',
     'm.mic':'Microphone (sing → notes)','m.range':'Vocal range','m.range.auto':'Automatic','m.range.low':'Low (bass/tenor)','m.range.mid':'Mid','m.range.high':'High (soprano)',
+    'm.react':'Response – pitch must stay this long','m.smooth':'Smoothing (readings)','m.micScale':'Only notes of the key','m.micTune':'Compensate tuning (sung sharp/flat)',
     'm.gate':'Sensitivity (level threshold)','m.dsp':'Browser noise suppression','m.display':'Display','m.displayhint':'(does not change notes)',
     'm.clef':'Clef','m.clef.treble':'Treble','m.clef.bass':'Bass','m.clef.alto':'Alto','m.abc':'ABC code','m.templates':'Templates','m.saved':'Saved songs',
     'b.apply':'↻ Apply ABC','b.copy':'Copy','b.print':'🖨 PDF preview','b.printNative':'🖨 Print score','b.save':'＋ Save current song',
@@ -452,6 +460,7 @@ const I18N={
     'm.group':'Группировка нотоносцев','m.group.single':'Каждый голос отдельно','m.group.pairs':'Парами (1+2, 3+4)','m.group.sa':'1+2 вместе, остальные отдельно',
     'm.lyrics':'Текст песни','m.transpose':'Транспонирование (только вид)',
     'm.mic':'Микрофон (пение → ноты)','m.range':'Диапазон','m.range.auto':'Автоматически','m.range.low':'Низкий (бас/тенор)','m.range.mid':'Средний','m.range.high':'Высокий (сопрано)',
+    'm.react':'Реакция – тон должен держаться','m.smooth':'Сглаживание (измерений)','m.micScale':'Только ноты тональности','m.micTune':'Компенсировать строй (выше/ниже)',
     'm.gate':'Чувствительность (порог уровня)','m.dsp':'Шумоподавление браузера','m.display':'Отображение','m.displayhint':'(не меняет ноты)',
     'm.clef':'Ключ','m.clef.treble':'Скрипичный','m.clef.bass':'Басовый','m.clef.alto':'Альтовый','m.abc':'ABC-код','m.templates':'Шаблоны','m.saved':'Сохранённые песни',
     'b.apply':'↻ Применить ABC','b.copy':'Копировать','b.print':'🖨 Просмотр PDF','b.printNative':'🖨 Печать нот','b.save':'＋ Сохранить песню',
@@ -821,11 +830,11 @@ function insertToken(tk){
   v.tokens.splice(i,0,tk); v.cursor=i+1;
   return i;
 }
-function insertNote(midi){
+function insertNote(midi, silent){
   const v=AV(); const dur=LEN_Q[state.len]||1;
   const i=insertToken({t:noteStr(midi,dur),kind:'note',midi,dur});
   v.sel=i;
-  playMidi(midi); render(true);
+  if(!silent) playMidi(midi); render(true);
 }
 // recompute all note/rest tokens' abc text (keeps each length multiple)
 function resyncTokens(){
@@ -1298,7 +1307,11 @@ function setKeyBtn(){ $('keyBtn').innerHTML=keyLabel()+' ▾<span class="k2">'+k
 
 /* ================= microphone → notes (YIN, offline) ================= */
 let micState=null;
-const micCfg={ gate:0.010, stableFrames:2, smoothWin:5, range:'auto', browserDsp:false };
+// settings kept on this device
+const micCfg=Object.assign({ gate:0.010, minMs:120, smoothWin:5, range:'auto', browserDsp:false, scaleOnly:true, tune:true },
+  (()=>{ try{ return JSON.parse(localStorage.getItem('abcMic')||'{}'); }catch(e){ return {}; } })());
+function saveMicCfg(){ try{ localStorage.setItem('abcMic',JSON.stringify(micCfg)); }catch(e){} }
+const MIC_HYST=0.75;   // stay on the current note until the voice is ¾ semitone away (no flicker between neighbours)
 const MIC_RANGES={ auto:[70,1200], low:[70,400], mid:[130,700], high:[250,1100] };
 const MIC_NAMES=['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
 function micName(m){ return MIC_NAMES[((m%12)+12)%12]+(Math.floor(m/12)-1); }
@@ -1317,33 +1330,53 @@ function yinDetect(buf, sr, gate){
   if(x0!==tau&&x2!==tau){ const s0=yin[x0],s1=yin[tau],s2=yin[x2],dn=(2*s1-s2-s0); if(dn!==0) bt=tau+(s2-s0)/(2*dn); }
   return {freq:sr/bt,rms};
 }
-function micMedian(arr){ const a=arr.slice().sort((x,y)=>x-y),m=a.length>>1; return a.length%2?a[m]:Math.round((a[m-1]+a[m])/2); }
+function micMedianF(arr){ const a=arr.slice().sort((x,y)=>x-y),m=a.length>>1; return a.length%2?a[m]:(a[m-1]+a[m])/2; }
+// nearest note (semitone, as float pitch m); with "only notes of the key": nearest note of the scale
+function micSnap(m){
+  if(!micCfg.scaleOnly) return Math.round(m);
+  const km=keyMap(state.key).map; let best=null, bd=1e9;
+  for(let n=Math.floor(m)-2;n<=Math.ceil(m)+2;n++){ if(!km[((n%12)+12)%12].inScale) continue; const d=Math.abs(n-m); if(d<bd){bd=d;best=n;} }
+  return best==null? Math.round(m) : best;
+}
+// end of a sung note: learn how far off the singer is (tuning compensation)
+function micLearn(){
+  const st=micState, d=st.devs; st.devs=[];
+  if(!micCfg.tune || d.length<4) return;
+  const dev=micMedianF(d);                                    // semitones off the written note
+  st.offset=Math.max(-0.45,Math.min(0.45, st.offset+0.5*dev)); // slowly, max. a little under ½ semitone
+}
 function micLoop(){
   if(!micState) return;
-  micState.analyser.getFloatTimeDomainData(micState.buf);
-  const {freq,rms}=yinDetect(micState.buf, micState.ctx.sampleRate, micCfg.gate);
+  const st=micState, now=performance.now();
+  st.analyser.getFloatTimeDomainData(st.buf);
+  const {freq,rms}=yinDetect(st.buf, st.ctx.sampleRate, micCfg.gate);
   const [fmin,fmax]=MIC_RANGES[micCfg.range]||MIC_RANGES.auto;
   const voiced= freq>0 && freq>=fmin && freq<=fmax;
   $('mmLevel').style.width=Math.min(100,Math.round(rms*450))+'%';
   if(voiced){
-    const midi=Math.round(69+12*Math.log2(freq/440));
-    const h=micState.hist; h.push(midi); while(h.length>micCfg.smoothWin) h.shift();
-    const smooth=micMedian(h);
-    if(micState.cand===smooth){ micState.candCount++; } else { micState.cand=smooth; micState.candCount=1; }
-    const onset= micState.pendingOnset || (rms>micState.prevRms*1.6 && rms>micCfg.gate*2);
-    micState.prevRms=rms;
-    $('mmNote').textContent=micName(smooth); $('mmFreq').textContent=Math.round(freq)+' Hz';
-    if(micState.candCount>=micCfg.stableFrames && (smooth!==micState.emitted || onset)){
-      insertNote(smooth);
-      micState.emitted=smooth; micState.pendingOnset=false; micState.candCount=0;
+    const raw=69+12*Math.log2(freq/440) - (micCfg.tune?st.offset:0);   // pitch as float, tuning removed
+    const h=st.hist; h.push(raw); while(h.length>micCfg.smoothWin) h.shift();
+    const m=micMedianF(h);
+    // hysteresis: keep the current note while the voice stays near it
+    let cand = (st.held!=null && Math.abs(m-st.held)<MIC_HYST) ? st.held : micSnap(m);
+    if(cand!==st.held){ if(st.held!=null) micLearn(); st.held=cand; st.since=now; }
+    if(Math.abs(m-cand)<0.5) st.devs.push(m-cand);
+    const onset= st.pendingOnset || (rms>st.prevRms*1.6 && rms>micCfg.gate*2);
+    if(onset && !st.pendingOnset && cand===st.emitted){ st.since=now; st.pendingOnset=true; }   // re-attack of the same note
+    st.prevRms=rms;
+    $('mmNote').textContent=micName(cand);
+    $('mmFreq').textContent=Math.round(freq)+' Hz'+(micCfg.tune&&Math.abs(st.offset)>=0.05?' · '+(st.offset>0?'+':'−')+Math.round(Math.abs(st.offset)*100)+' ct':'');
+    if(now-st.since>=micCfg.minMs && (cand!==st.emitted || st.pendingOnset)){
+      insertNote(cand,true);                                   // silent: the speaker must not feed back into the mic
+      st.emitted=cand; st.pendingOnset=false;
     }
-    micState.silence=0;
+    st.silence=0;
   } else {
-    micState.prevRms=rms; micState.silence++;
+    st.prevRms=rms; st.silence++;
     $('mmNote').textContent='—'; $('mmFreq').textContent='0 Hz';
-    if(micState.silence>=3){ micState.pendingOnset=true; micState.emitted=null; micState.cand=null; micState.candCount=0; micState.hist.length=0; }
+    if(st.silence>=3 && st.held!=null){ micLearn(); st.pendingOnset=true; st.emitted=null; st.held=null; st.hist.length=0; }
   }
-  micState.raf=requestAnimationFrame(micLoop);
+  st.raf=requestAnimationFrame(micLoop);
 }
 async function startMic(){
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){ alert('Mikrofon wird nicht unterstützt'); return; }
@@ -1354,7 +1387,7 @@ async function startMic(){
     if(ctx.state==='suspended'){ try{ await ctx.resume(); }catch(e){} }
     const src=ctx.createMediaStreamSource(stream);
     const analyser=ctx.createAnalyser(); analyser.fftSize=2048; src.connect(analyser);
-    micState={stream,ctx,analyser,buf:new Float32Array(analyser.fftSize),emitted:null,cand:null,candCount:0,silence:0,hist:[],prevRms:0,pendingOnset:true,raf:null};
+    micState={stream,ctx,analyser,buf:new Float32Array(analyser.fftSize),emitted:null,held:null,since:0,silence:0,hist:[],devs:[],offset:0,prevRms:0,pendingOnset:true,raf:null};
     $('micBtn').classList.add('listening'); $('micMon').hidden=false;
     micLoop();
   }catch(e){ alert('Kein Zugriff auf das Mikrofon'+(e&&e.name?' ('+e.name+(e.message?': '+e.message:'')+')':'')); }
@@ -1774,9 +1807,20 @@ if(NATIVE){ $('btnMidi').style.display=''; $('btnMp3').style.display=''; $('btnP
 
 $('micBtn').onclick=()=>{ if(micState) stopMic(); else startMic(); };
 $('mmStop').onclick=stopMic;
-$('micRange').onchange=()=>micCfg.range=$('micRange').value;
-$('micGate').oninput=()=>micCfg.gate=parseInt($('micGate').value)/1000;
-$('micDsp').onchange=()=>micCfg.browserDsp=$('micDsp').checked;
+function showMicCfg(){
+  $('micRange').value=micCfg.range; $('micGate').value=Math.round(micCfg.gate*1000); $('micDsp').checked=micCfg.browserDsp;
+  $('micReact').value=micCfg.minMs; $('micReactV').textContent=micCfg.minMs+' ms';
+  $('micSmooth').value=micCfg.smoothWin; $('micSmoothV').textContent=micCfg.smoothWin;
+  $('micScale').checked=micCfg.scaleOnly; $('micTune').checked=micCfg.tune;
+}
+showMicCfg();
+$('micRange').onchange=()=>{ micCfg.range=$('micRange').value; saveMicCfg(); };
+$('micGate').oninput=()=>{ micCfg.gate=parseInt($('micGate').value)/1000; saveMicCfg(); };
+$('micDsp').onchange=()=>{ micCfg.browserDsp=$('micDsp').checked; saveMicCfg(); };
+$('micReact').oninput=()=>{ micCfg.minMs=+$('micReact').value; $('micReactV').textContent=micCfg.minMs+' ms'; saveMicCfg(); };
+$('micSmooth').oninput=()=>{ micCfg.smoothWin=+$('micSmooth').value; $('micSmoothV').textContent=micCfg.smoothWin; if(micState) micState.hist.length=0; saveMicCfg(); };
+$('micScale').onchange=()=>{ micCfg.scaleOnly=$('micScale').checked; saveMicCfg(); };
+$('micTune').onchange=()=>{ micCfg.tune=$('micTune').checked; if(micState) micState.offset=0; saveMicCfg(); };
 
 /* ================= templates + saved songs ================= */
 const TEMPLATES=[

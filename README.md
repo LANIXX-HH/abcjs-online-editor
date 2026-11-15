@@ -49,7 +49,14 @@ Der gelbe Knopf unten zeigt die Tonart, z. B. **C-Dur / Do Major**. Antippen öf
 
 ### Singen statt tippen
 - **🎤** oben antippen und singen oder summen – erkannte Töne werden als Noten in die aktive Stimme geschrieben. Unten erscheint eine Anzeige (Note, Frequenz, Pegel); **Stop** beendet.
-- Einstellungen dazu im Menü unter *Mikrofon*: Stimmlage, Empfindlichkeit, Rauschunterdrückung.
+- Beim Singen wird nichts abgespielt (sonst hört das Mikrofon den Lautsprecher).
+- Einstellungen im Menü unter *Mikrofon* (bleiben gespeichert):
+  - **Stimmlage**, **Empfindlichkeit**, Browser-Rauschunterdrückung
+  - **Reaktion:** so lange muss ein Ton gleich bleiben, bevor er geschrieben wird (Standard 120 ms; höher = ruhiger)
+  - **Glättung:** über wie viele Messungen gemittelt wird (Standard 5)
+  - **Nur Töne der Tonart:** gesungene Töne werden auf die Tonleiter der eingestellten Tonart gerundet (Standard an)
+  - **Stimmung ausgleichen:** wer insgesamt etwas zu hoch/zu tief singt, wird ausgeglichen; die Abweichung steht in der Anzeige (z. B. `−30 ct`)
+- Zwischen zwei Nachbartönen springt die Erkennung nicht hin und her: ein Ton bleibt, bis die Stimme deutlich beim nächsten ist.
 - Tipp: Töne klar absetzen, ruhige Umgebung.
 
 ## Mehrere Stimmen
@@ -90,7 +97,7 @@ Erneut **Text** antippen kehrt zur Noteneingabe zurück.
 | **Lied-Info** | Titel, Komponist, Taktart, Tempo, Einheitslänge – Taktart/Tempo/Einheitslänge auch „— Keine —“ |
 | **Stimmen** | Ein-/Mehrstimmig, Anzahl, Bündelung, Name und Schlüssel je Stimme |
 | **Bearbeiten** | Noten ziehen ein/aus |
-| **Mikrofon** | Stimmlage, Empfindlichkeit, Rauschunterdrückung |
+| **Mikrofon** | Stimmlage, Empfindlichkeit, Reaktion, Glättung, nur Töne der Tonart, Stimmung ausgleichen, Rauschunterdrückung |
 | **Klang** | Instrument **pro Stimme** für Abspielen, Antippen und MP3: Klavier, Chor („Aah“), Kirchenorgel. Gilt auf diesem Gerät, der ABC-Code bleibt unverändert (Chor/Orgel: die obersten 11 Klaviertasten bleiben stumm) |
 | **Darstellung** | Notenschlüssel (einstimmig), **Schrift** für Titel, Liedtext und Texte im Notenbild (Standard, EB Garamond, Lora, Merriweather, Roboto, Lato, Nunito, Dancing Script, Caveat, Kirchenslawisch „Ponomar“) – gilt auch für Druck und ABC-Code, Transponieren – ändert nur die Anzeige und den Druck, nicht die Noten |
 | **Export** | siehe unten |
