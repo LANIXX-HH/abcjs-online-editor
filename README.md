@@ -73,7 +73,7 @@ Knopf **Text** oben öffnet die Liedtext-Ebene (Noten sind dabei gesperrt):
 Erneut **Text** antippen kehrt zur Noteneingabe zurück.
 
 ## Abspielen
-**▶︎** spielt das Stück – ist vorher eine Note angetippt, ab dieser Note. **⏮** springt an den Anfang und spielt von dort; die gerade klingende Note wird markiert (bei offenem ABC-Code auch die Stelle im Code). **⏸** pausiert.
+**▶︎** spielt das Stück – ist vorher eine Note angetippt, ab dieser Note. **⏮** springt an den Anfang und spielt von dort; die gerade klingende Note wird **rot** markiert (bei offenem ABC-Code auch die Stelle im Code). **⏸** pausiert.
 
 ## ABC-Code
 **`</>`** blendet den ABC-Code über dem Notenbild ein:
@@ -90,7 +90,7 @@ Erneut **Text** antippen kehrt zur Noteneingabe zurück.
 | **Stimmen** | Ein-/Mehrstimmig, Anzahl, Bündelung, Name und Schlüssel je Stimme |
 | **Bearbeiten** | Noten ziehen ein/aus |
 | **Mikrofon** | Stimmlage, Empfindlichkeit, Rauschunterdrückung |
-| **Klang** | Instrument für Abspielen, Antippen und MP3: Klavier, Chor („Aah“), Kirchenorgel (Chor/Orgel: die obersten 11 Klaviertasten bleiben stumm) |
+| **Klang** | Instrument **pro Stimme** für Abspielen, Antippen und MP3: Klavier, Chor („Aah“), Kirchenorgel. Gilt auf diesem Gerät, der ABC-Code bleibt unverändert (Chor/Orgel: die obersten 11 Klaviertasten bleiben stumm) |
 | **Darstellung** | Notenschlüssel (einstimmig), Transponieren – ändert nur die Anzeige und den Druck, nicht die Noten |
 | **Export** | siehe unten |
 | **Vorlagen** | C-Dur Tonleiter, Hänschen Klein, Walzer, SATB-Beispiel |

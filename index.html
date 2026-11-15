@@ -70,7 +70,7 @@ button{font-family:inherit}
 #paper.multi svg :is(.abcjs-note,.abcjs-rest,.abcjs-beam-elem).abcjs-v3,#paper.multi svg :is(.abcjs-note,.abcjs-rest,.abcjs-beam-elem).abcjs-v3 path{fill:var(--vc3);stroke:var(--vc3)}
 #paper .sel-note,#paper .sel-note *{fill:var(--accent,#e3863a)!important;stroke:var(--accent,#e3863a)!important}
 /* note currently being played (▶︎) */
-#paper .abcjs-highlight,#paper .abcjs-highlight *{fill:var(--orange)!important;stroke:var(--orange)!important}
+#paper .abcjs-highlight,#paper .abcjs-highlight *{fill:#E0281E!important;stroke:#E0281E!important}   /* note being played: red */
 #paper .abcjs-note{cursor:pointer}
 /* lyrics layer: music greyed and locked, lyric text normal, fields under each system */
 #paper.lyrmode svg path,#paper.lyrmode svg text,#paper.lyrmode svg tspan{fill:#A9AEB8!important;stroke:#A9AEB8!important}
@@ -268,8 +268,7 @@ button{font-family:inherit}
       <h3 data-i18n="m.edit">Bearbeiten</h3>
       <div class="mrow"><label><input type="checkbox" id="fDrag" style="width:auto;margin-right:6px"><span data-i18n="m.drag">Noten ziehen (Tonhöhe per Finger/Maus ändern)</span></label></div>
       <h3 data-i18n="m.sound">Klang</h3>
-      <div class="mrow"><label data-i18n="m.instr">Instrument</label>
-        <select id="fInstr"><option value="piano" data-i18n="m.instr.piano">Klavier</option><option value="choir" data-i18n="m.instr.choir">Chor („Aah“)</option><option value="organ" data-i18n="m.instr.organ">Kirchenorgel</option></select></div>
+      <div id="instrRows"></div>
       <h3><span data-i18n="m.display">Darstellung</span> <span style="text-transform:none;font-weight:400" data-i18n="m.displayhint">(ändert Noten nicht)</span></h3>
       <div class="mrow" id="clefRow"><label data-i18n="m.clef">Notenschlüssel</label>
         <select id="fClef"><option value="treble" data-i18n="m.clef.treble">Violin</option><option value="bass" data-i18n="m.clef.bass">Bass</option><option value="alto" data-i18n="m.clef.alto">Alt</option></select></div>
@@ -1117,7 +1116,25 @@ function buildVoicebar(){
     vb.appendChild(b);
   }
 }
+function buildInstrRows(){
+  const box=$('instrRows'); box.innerHTML='';
+  const n=nActive();
+  for(let vi=0; vi<n; vi++){
+    const v=state.voices[vi], row=document.createElement('div'); row.className='mrow';
+    const label = n===1 ? t('m.instr') : (t('v.voice')+' '+(vi+1)+(v&&v.name?' · '+v.name:''));
+    row.innerHTML='<label'+(n>1?' style="color:'+VOICE_COLORS[vi]+';font-weight:700"':'')+'></label><select data-ins="'+vi+'">'+
+      Object.keys(INSTRUMENTS).map(k=>'<option value="'+k+'"'+(instruments[vi]===k?' selected':'')+'>'+t('m.instr.'+k)+'</option>').join('')+'</select>';
+    row.querySelector('label').textContent=label;
+    box.appendChild(row);
+  }
+  box.querySelectorAll('[data-ins]').forEach(sel=>sel.onchange=()=>{
+    const vi=+sel.dataset.ins; instruments[vi]=sel.value;
+    if(n===1) instruments=[sel.value,sel.value,sel.value,sel.value];   // single voice: one choice for all
+    saveInstruments(); setupPlayer();
+  });
+}
 function buildVoiceEditors(){
+  buildInstrRows();
   const box=$('voiceEditors'); box.innerHTML='';
   if(state.voiceMode==='single'){ return; }
   for(let vi=0; vi<state.voiceCount; vi++){
@@ -1133,7 +1150,7 @@ function buildVoiceEditors(){
     box.appendChild(wrap);
   }
   box.querySelectorAll('[data-vn]').forEach(inp=>inp.oninput=()=>{
-    state.voices[+inp.dataset.vn].name=inp.value; buildVoicebar(); render(true);
+    state.voices[+inp.dataset.vn].name=inp.value; buildVoicebar(); buildInstrRows(); render(true);
   });
   box.querySelectorAll('[data-vc]').forEach(sel=>sel.onchange=()=>{
     state.voices[+sel.dataset.vc].clef=sel.value; render(true);
@@ -1268,8 +1285,26 @@ const SOUNDFONT_URL=(typeof AndroidExport!=='undefined')?'soundfont/':'https://p
 const SOUNDFONT_VOL=0.4;
 // Instrument for ▶︎, click sound and MP3 (General-MIDI program; the app bundles exactly these three)
 const INSTRUMENTS={piano:0, choir:52, organ:19};   // acoustic_grand_piano, choir_aahs, church_organ
-let instrument=(()=>{ try{ const v=localStorage.getItem('abcInstrument'); return INSTRUMENTS[v]!=null?v:'piano'; }catch(e){ return 'piano'; } })();
-const synthOpts=()=>({soundFontUrl:SOUNDFONT_URL, soundFontVolumeMultiplier:SOUNDFONT_VOL, program:INSTRUMENTS[instrument]});
+// one instrument per voice (index = voice 1..4), kept on this device
+let instruments=(()=>{ let a=null;
+  try{ a=JSON.parse(localStorage.getItem('abcInstruments')||'null'); }catch(e){}
+  if(!Array.isArray(a)){ let one='piano'; try{ one=localStorage.getItem('abcInstrument')||'piano'; }catch(e){} a=[one,one,one,one]; }
+  return [0,1,2,3].map(i=>INSTRUMENTS[a[i]]!=null?a[i]:'piano'); })();
+function saveInstruments(){ try{ localStorage.setItem('abcInstruments',JSON.stringify(instruments)); }catch(e){} }
+const progOf=vi=>INSTRUMENTS[instruments[state.voiceMode==='single'?0:vi]||'piano'];
+const synthOpts=()=>({soundFontUrl:SOUNDFONT_URL, soundFontVolumeMultiplier:SOUNDFONT_VOL});
+// Per-voice instrument for abcjs' synth without touching the ABC text: put a "%%MIDI program n"
+// element at the start of each voice in the parsed tune (the score is already drawn; only audio reads it).
+function applyInstruments(vo){
+  if(!vo||!vo.lines) return;
+  const line=vo.lines.find(l=>l.staff&&l.staff.length); if(!line) return;
+  let k=0;
+  line.staff.forEach(st=>(st.voices||[]).forEach(arr=>{
+    for(let j=arr.length-1;j>=0;j--) if(arr[j]&&arr[j]._instr) arr.splice(j,1);   // replace ours from a previous call
+    arr.unshift({el_type:'midi',cmd:'program',params:[progOf(k)],_instr:true});
+    k++;
+  }));
+}
 // Single note (click / mic / drag sound). Same soundfont + same volume factor as ▶︎,
 // so it sounds identical and also works offline in the app.
 // (ABCJS.synth.playEvent would load abcjs' default FluidR3 soundfont from the internet at ×3.0.)
@@ -1278,7 +1313,7 @@ function playMidi(midi){
   if(!window.ABCJS||!ABCJS.synth||!ABCJS.synth.supportsAudio())return;
   try{
     const seq=new ABCJS.synth.SynthSequence();
-    const tr=seq.addTrack(); seq.setInstrument(tr,INSTRUMENTS[instrument]);
+    const tr=seq.addTrack(); seq.setInstrument(tr,progOf(state.activeVoice));
     seq.appendNote(tr, midi, 0.25, NOTE_VELOCITY, 0);
     const go=()=>{ const b=new ABCJS.synth.CreateSynth();
       return b.init({sequence:seq, millisecondsPerMeasure:1000,
@@ -1312,6 +1347,7 @@ async function setupPlayer(){
     playing=false; setPlayIcon(); clearHighlight();
     synthControl=new ABCJS.synth.SynthController();
     synthControl.load('#player', cursorControl, {displayPlay:true,displayProgress:false});
+    applyInstruments(visualObj);
     await synthControl.setTune(visualObj,false,synthOpts());
   }catch(e){ console.warn('setupPlayer',e); }
 }
@@ -1611,6 +1647,7 @@ $('btnMp3').onclick=async()=>{
   if(typeof lamejs==='undefined'){ alert('MP3-Encoder nicht geladen'); return; }
   try{
     const buf=new ABCJS.synth.CreateSynth();
+    applyInstruments(visualObj);
     await buf.init({visualObj,options:synthOpts()});
     await buf.prime();
     const abs=buf.audioBuffers;
@@ -1683,8 +1720,7 @@ window.addEventListener('resize',()=>{
 // note dragging: off by default (scrolling over a note moved it), choice is saved
 state.dragOn=(()=>{ try{ return localStorage.getItem('abcDragOn')==='1'; }catch(e){ return false; } })();
 $('fDrag').checked=state.dragOn;
-$('fInstr').value=instrument;
-$('fInstr').onchange=()=>{ instrument=$('fInstr').value; try{ localStorage.setItem('abcInstrument',instrument); }catch(e){} setupPlayer(); };
+
 $('fDrag').onchange=()=>{ state.dragOn=$('fDrag').checked; try{ localStorage.setItem('abcDragOn',state.dragOn?'1':'0'); }catch(e){} render(false); };
 $('langSel').value=LANG;
 $('langSel').onchange=()=>setLang($('langSel').value);
