@@ -267,6 +267,9 @@ button{font-family:inherit}
       <div class="mrow"><label><input type="checkbox" id="micDsp" style="width:auto;margin-right:6px"><span data-i18n="m.dsp">Browser-Rauschunterdrückung</span></label></div>
       <h3 data-i18n="m.edit">Bearbeiten</h3>
       <div class="mrow"><label><input type="checkbox" id="fDrag" style="width:auto;margin-right:6px"><span data-i18n="m.drag">Noten ziehen (Tonhöhe per Finger/Maus ändern)</span></label></div>
+      <h3 data-i18n="m.sound">Klang</h3>
+      <div class="mrow"><label data-i18n="m.instr">Instrument</label>
+        <select id="fInstr"><option value="piano" data-i18n="m.instr.piano">Klavier</option><option value="choir" data-i18n="m.instr.choir">Chor („Aah“)</option><option value="organ" data-i18n="m.instr.organ">Kirchenorgel</option></select></div>
       <h3><span data-i18n="m.display">Darstellung</span> <span style="text-transform:none;font-weight:400" data-i18n="m.displayhint">(ändert Noten nicht)</span></h3>
       <div class="mrow" id="clefRow"><label data-i18n="m.clef">Notenschlüssel</label>
         <select id="fClef"><option value="treble" data-i18n="m.clef.treble">Violin</option><option value="bass" data-i18n="m.clef.bass">Bass</option><option value="alto" data-i18n="m.clef.alto">Alt</option></select></div>
@@ -388,7 +391,7 @@ const $=id=>document.getElementById(id);
 
 /* ================= i18n ================= */
 const I18N={
-  de:{'b.open':'📂 Datei öffnen','open.pick':'Welches Stück?','open.err':'Datei konnte nicht gelesen werden','m.help':'📖 Anleitung','m.helpTitle':'Anleitung','m.github':'Projekt auf GitHub','m.glory':'Zur Ehre Gottes geschaffen','m.edit':'Bearbeiten','m.drag':'Noten ziehen (Tonhöhe per Finger/Maus ändern)','kc.title':'Tonart wählen','kc.ok':'Übernehmen','kc.cancel':'Abbrechen','kc.acc0':'keine Vorzeichen','tb.lyrics':'Text','ly.add':'＋ Text','ly.free':'Freitext unter dem Stück','ly.addFree':'＋ Freitext','ly.notes':'Noten','ly.syl':'Silben','ly.under':'Text unter','ly.verse':'Zeile','ly.hint':'Silben mit - trennen, _ hält eine Silbe, * überspringt eine Note, | springt zum nächsten Takt','tb.menu':'☰ Menü','m.settings':'Einstellungen','m.song':'Lied-Info','m.title':'Titel','m.composer':'Komponist','m.meter':'Taktart','m.tempo':'Tempo (BPM)','m.unit':'Einheitslänge (L:)',
+  de:{'m.sound':'Klang','m.instr':'Instrument','m.instr.piano':'Klavier','m.instr.choir':'Chor („Aah“)','m.instr.organ':'Kirchenorgel','b.open':'📂 Datei öffnen','open.pick':'Welches Stück?','open.err':'Datei konnte nicht gelesen werden','m.help':'📖 Anleitung','m.helpTitle':'Anleitung','m.github':'Projekt auf GitHub','m.glory':'Zur Ehre Gottes geschaffen','m.edit':'Bearbeiten','m.drag':'Noten ziehen (Tonhöhe per Finger/Maus ändern)','kc.title':'Tonart wählen','kc.ok':'Übernehmen','kc.cancel':'Abbrechen','kc.acc0':'keine Vorzeichen','tb.lyrics':'Text','ly.add':'＋ Text','ly.free':'Freitext unter dem Stück','ly.addFree':'＋ Freitext','ly.notes':'Noten','ly.syl':'Silben','ly.under':'Text unter','ly.verse':'Zeile','ly.hint':'Silben mit - trennen, _ hält eine Silbe, * überspringt eine Note, | springt zum nächsten Takt','tb.menu':'☰ Menü','m.settings':'Einstellungen','m.song':'Lied-Info','m.title':'Titel','m.composer':'Komponist','m.meter':'Taktart','m.tempo':'Tempo (BPM)','m.unit':'Einheitslänge (L:)',
     'opt.none':'— Keine —','meter.44':'4/4 – Vier Viertel','meter.34':'3/4 – Walzer','meter.24':'2/4 – Marsch','meter.68':'6/8 – Jig','meter.C':'C – Common time',
     'unit.8':'1/8 – Achtel','unit.4':'1/4 – Viertel','unit.2':'1/2 – Halbe','unit.1':'1 – Ganze',
     'm.voices':'Stimmen','m.mode':'Modus','m.single':'Einstimmig','m.multi':'Mehrstimmig (SATB)','m.vcount':'Anzahl Stimmen',
@@ -402,7 +405,7 @@ const I18N={
     'sym.newline':'⏎ Neue Zeile','sym.repstart':'|: Wdh. auf','sym.repend':':| Wdh. zu',
     'len.whole':'𝅝 Ganze','len.half':'𝅗𝅥 Halbe','len.quarter':'♩ Viertel','len.eighth':'♪ Achtel','len.sixteenth':'𝅘𝅥𝅯 Sechzehntel',
     'v.voice':'Stimme','saved.empty':'Noch nichts gespeichert.'},
-  en:{'b.open':'📂 Open file','open.pick':'Which tune?','open.err':'Could not read the file','m.help':'📖 User guide','m.helpTitle':'User guide','m.github':'Project on GitHub','m.glory':'Created to the Glory of God','m.edit':'Editing','m.drag':'Drag notes (change pitch with finger/mouse)','kc.title':'Choose key','kc.ok':'Apply','kc.cancel':'Cancel','kc.acc0':'no accidentals','tb.lyrics':'Lyrics','ly.add':'＋ Lyrics','ly.free':'Free text below the tune','ly.addFree':'＋ Free text','ly.notes':'notes','ly.syl':'syllables','ly.under':'Text under','ly.verse':'Line','ly.hint':'Split syllables with -, _ holds a syllable, * skips a note, | jumps to the next bar','tb.menu':'☰ Menu','m.settings':'Settings','m.song':'Song info','m.title':'Title','m.composer':'Composer','m.meter':'Meter','m.tempo':'Tempo (BPM)','m.unit':'Unit length (L:)',
+  en:{'m.sound':'Sound','m.instr':'Instrument','m.instr.piano':'Piano','m.instr.choir':'Choir (“Aah”)','m.instr.organ':'Church organ','b.open':'📂 Open file','open.pick':'Which tune?','open.err':'Could not read the file','m.help':'📖 User guide','m.helpTitle':'User guide','m.github':'Project on GitHub','m.glory':'Created to the Glory of God','m.edit':'Editing','m.drag':'Drag notes (change pitch with finger/mouse)','kc.title':'Choose key','kc.ok':'Apply','kc.cancel':'Cancel','kc.acc0':'no accidentals','tb.lyrics':'Lyrics','ly.add':'＋ Lyrics','ly.free':'Free text below the tune','ly.addFree':'＋ Free text','ly.notes':'notes','ly.syl':'syllables','ly.under':'Text under','ly.verse':'Line','ly.hint':'Split syllables with -, _ holds a syllable, * skips a note, | jumps to the next bar','tb.menu':'☰ Menu','m.settings':'Settings','m.song':'Song info','m.title':'Title','m.composer':'Composer','m.meter':'Meter','m.tempo':'Tempo (BPM)','m.unit':'Unit length (L:)',
     'opt.none':'— None —','meter.44':'4/4 – Common','meter.34':'3/4 – Waltz','meter.24':'2/4 – March','meter.68':'6/8 – Jig','meter.C':'C – Common time',
     'unit.8':'1/8 – Eighth','unit.4':'1/4 – Quarter','unit.2':'1/2 – Half','unit.1':'1 – Whole',
     'm.voices':'Voices','m.mode':'Mode','m.single':'Single voice','m.multi':'Multi-voice (SATB)','m.vcount':'Number of voices',
@@ -416,7 +419,7 @@ const I18N={
     'sym.newline':'⏎ New line','sym.repstart':'|: Repeat start','sym.repend':':| Repeat end',
     'len.whole':'𝅝 Whole','len.half':'𝅗𝅥 Half','len.quarter':'♩ Quarter','len.eighth':'♪ Eighth','len.sixteenth':'𝅘𝅥𝅯 Sixteenth',
     'v.voice':'Voice','saved.empty':'Nothing saved yet.'},
-  ru:{'b.open':'📂 Открыть файл','open.pick':'Какую мелодию?','open.err':'Не удалось прочитать файл','m.help':'📖 Инструкция','m.helpTitle':'Инструкция','m.github':'Проект на GitHub','m.glory':'Создано во Славу Божию','m.edit':'Редактирование','m.drag':'Перетаскивать ноты (менять высоту пальцем/мышью)','kc.title':'Выбор тональности','kc.ok':'Применить','kc.cancel':'Отмена','kc.acc0':'без знаков','tb.lyrics':'Текст','ly.add':'＋ Текст','ly.free':'Свободный текст под песней','ly.addFree':'＋ Свободный текст','ly.notes':'нот','ly.syl':'слогов','ly.under':'Текст под','ly.verse':'Строка','ly.hint':'Слоги через -, _ тянет слог, * пропускает ноту, | переход к следующему такту','tb.menu':'☰ Меню','m.settings':'Настройки','m.song':'О песне','m.title':'Название','m.composer':'Композитор','m.meter':'Размер','m.tempo':'Темп (BPM)','m.unit':'Базовая длит. (L:)',
+  ru:{'m.sound':'Звук','m.instr':'Инструмент','m.instr.piano':'Фортепиано','m.instr.choir':'Хор («А-а»)','m.instr.organ':'Церковный орган','b.open':'📂 Открыть файл','open.pick':'Какую мелодию?','open.err':'Не удалось прочитать файл','m.help':'📖 Инструкция','m.helpTitle':'Инструкция','m.github':'Проект на GitHub','m.glory':'Создано во Славу Божию','m.edit':'Редактирование','m.drag':'Перетаскивать ноты (менять высоту пальцем/мышью)','kc.title':'Выбор тональности','kc.ok':'Применить','kc.cancel':'Отмена','kc.acc0':'без знаков','tb.lyrics':'Текст','ly.add':'＋ Текст','ly.free':'Свободный текст под песней','ly.addFree':'＋ Свободный текст','ly.notes':'нот','ly.syl':'слогов','ly.under':'Текст под','ly.verse':'Строка','ly.hint':'Слоги через -, _ тянет слог, * пропускает ноту, | переход к следующему такту','tb.menu':'☰ Меню','m.settings':'Настройки','m.song':'О песне','m.title':'Название','m.composer':'Композитор','m.meter':'Размер','m.tempo':'Темп (BPM)','m.unit':'Базовая длит. (L:)',
     'opt.none':'— Нет —','meter.44':'4/4 – Четыре четверти','meter.34':'3/4 – Вальс','meter.24':'2/4 – Марш','meter.68':'6/8 – Джига','meter.C':'C – Common time',
     'unit.8':'1/8 – Восьмая','unit.4':'1/4 – Четверть','unit.2':'1/2 – Половинная','unit.1':'1 – Целая',
     'm.voices':'Голоса','m.mode':'Режим','m.single':'Один голос','m.multi':'Многоголосие (SATB)','m.vcount':'Число голосов',
@@ -1263,6 +1266,10 @@ function stopMic(){
 // Auto-detect: Android WebView injects AndroidExport → use bundled local soundfont; web → CDN.
 const SOUNDFONT_URL=(typeof AndroidExport!=='undefined')?'soundfont/':'https://paulrosen.github.io/midi-js-soundfonts/abcjs/';
 const SOUNDFONT_VOL=0.4;
+// Instrument for ▶︎, click sound and MP3 (General-MIDI program; the app bundles exactly these three)
+const INSTRUMENTS={piano:0, choir:52, organ:19};   // acoustic_grand_piano, choir_aahs, church_organ
+let instrument=(()=>{ try{ const v=localStorage.getItem('abcInstrument'); return INSTRUMENTS[v]!=null?v:'piano'; }catch(e){ return 'piano'; } })();
+const synthOpts=()=>({soundFontUrl:SOUNDFONT_URL, soundFontVolumeMultiplier:SOUNDFONT_VOL, program:INSTRUMENTS[instrument]});
 // Single note (click / mic / drag sound). Same soundfont + same volume factor as ▶︎,
 // so it sounds identical and also works offline in the app.
 // (ABCJS.synth.playEvent would load abcjs' default FluidR3 soundfont from the internet at ×3.0.)
@@ -1271,11 +1278,11 @@ function playMidi(midi){
   if(!window.ABCJS||!ABCJS.synth||!ABCJS.synth.supportsAudio())return;
   try{
     const seq=new ABCJS.synth.SynthSequence();
-    const tr=seq.addTrack(); seq.setInstrument(tr,0);
+    const tr=seq.addTrack(); seq.setInstrument(tr,INSTRUMENTS[instrument]);
     seq.appendNote(tr, midi, 0.25, NOTE_VELOCITY, 0);
     const go=()=>{ const b=new ABCJS.synth.CreateSynth();
       return b.init({sequence:seq, millisecondsPerMeasure:1000,
-                     options:{soundFontUrl:SOUNDFONT_URL, soundFontVolumeMultiplier:SOUNDFONT_VOL}})
+                     options:synthOpts()})
               .then(()=>b.prime()).then(()=>b.start()); };
     const ac=ABCJS.synth.activeAudioContext();
     (ac&&ac.state==='suspended' ? ac.resume().then(go) : go()).catch(()=>{});
@@ -1305,7 +1312,7 @@ async function setupPlayer(){
     playing=false; setPlayIcon(); clearHighlight();
     synthControl=new ABCJS.synth.SynthController();
     synthControl.load('#player', cursorControl, {displayPlay:true,displayProgress:false});
-    await synthControl.setTune(visualObj,false,{soundFontUrl:SOUNDFONT_URL,soundFontVolumeMultiplier:SOUNDFONT_VOL});
+    await synthControl.setTune(visualObj,false,synthOpts());
   }catch(e){ console.warn('setupPlayer',e); }
 }
 
@@ -1604,7 +1611,7 @@ $('btnMp3').onclick=async()=>{
   if(typeof lamejs==='undefined'){ alert('MP3-Encoder nicht geladen'); return; }
   try{
     const buf=new ABCJS.synth.CreateSynth();
-    await buf.init({visualObj,options:{soundFontUrl:SOUNDFONT_URL,soundFontVolumeMultiplier:SOUNDFONT_VOL}});
+    await buf.init({visualObj,options:synthOpts()});
     await buf.prime();
     const abs=buf.audioBuffers;
     if(!abs||!abs.length||!abs[0].getChannelData) throw new Error('kein Audiopuffer');
@@ -1676,6 +1683,8 @@ window.addEventListener('resize',()=>{
 // note dragging: off by default (scrolling over a note moved it), choice is saved
 state.dragOn=(()=>{ try{ return localStorage.getItem('abcDragOn')==='1'; }catch(e){ return false; } })();
 $('fDrag').checked=state.dragOn;
+$('fInstr').value=instrument;
+$('fInstr').onchange=()=>{ instrument=$('fInstr').value; try{ localStorage.setItem('abcInstrument',instrument); }catch(e){} setupPlayer(); };
 $('fDrag').onchange=()=>{ state.dragOn=$('fDrag').checked; try{ localStorage.setItem('abcDragOn',state.dragOn?'1':'0'); }catch(e){} render(false); };
 $('langSel').value=LANG;
 $('langSel').onchange=()=>setLang($('langSel').value);

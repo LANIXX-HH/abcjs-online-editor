@@ -60,18 +60,21 @@ jobs:
           pip install --quiet markdown
           python3 android/build_docs.py README.md android/app/src/main/assets/docs.html
 
-      - name: Bundle piano soundfont (offline audio + MP3)
+      - name: Bundle soundfonts – piano, choir, church organ (offline audio + MP3)
         run: |
           set -e
           ASSETS=android/app/src/main/assets
           # Grab just the grand-piano mp3 notes (abcjs soundfont format)
           git clone --depth 1 --filter=blob:none --sparse \
             https://github.com/paulrosen/midi-js-soundfonts sf
-          git -C sf sparse-checkout set abcjs/acoustic_grand_piano-mp3
+          INSTR="acoustic_grand_piano-mp3 choir_aahs-mp3 church_organ-mp3"   # = INSTRUMENTS in index.html
+          git -C sf sparse-checkout set $(for i in $INSTR; do echo abcjs/$i; done)
           mkdir -p "$ASSETS/soundfont"
-          cp -r sf/abcjs/acoustic_grand_piano-mp3 "$ASSETS/soundfont/"
+          for i in $INSTR; do
+            cp -r "sf/abcjs/$i" "$ASSETS/soundfont/"
+            echo "$i: $(ls "$ASSETS/soundfont/$i" | wc -l) files"
+          done
           rm -rf sf
-          echo "Soundfont notes: $(ls "$ASSETS/soundfont/acoustic_grand_piano-mp3" | wc -l) files"
 
       - name: Build debug APK
         uses: gradle/actions/setup-gradle@v4

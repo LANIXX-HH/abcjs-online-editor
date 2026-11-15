@@ -35,6 +35,6 @@ Die App hat **keine eigene Kopie** des Editors. Der Build nimmt immer die `index
 ## Technik (kurz)
 
 - WebView lädt `file:///android_asset/index.html`.
-- Der Build lädt `abcjs`, `lamejs` (MP3) und den Klavier-Soundfont herunter, legt sie in die App-Assets und biegt die Web-Adressen auf die lokalen Dateien um.
+- Der Build lädt `abcjs`, `lamejs` (MP3) und die Klänge (Klavier, Chor, Kirchenorgel) herunter, legt sie in die App-Assets und biegt die Web-Adressen auf die lokalen Dateien um.
 - Berechtigungen: `RECORD_AUDIO` und `MODIFY_AUDIO_SETTINGS` (Mikrofon), Speichern über `localStorage`.
 - Die APK ist mit dem Debug-Schlüssel signiert; für den Play Store wäre ein eigener Release-Schlüssel nötig.

@@ -90,6 +90,7 @@ Erneut **Text** antippen kehrt zur Noteneingabe zurück.
 | **Stimmen** | Ein-/Mehrstimmig, Anzahl, Bündelung, Name und Schlüssel je Stimme |
 | **Bearbeiten** | Noten ziehen ein/aus |
 | **Mikrofon** | Stimmlage, Empfindlichkeit, Rauschunterdrückung |
+| **Klang** | Instrument für Abspielen, Antippen und MP3: Klavier, Chor („Aah“), Kirchenorgel (Chor/Orgel: die obersten 11 Klaviertasten bleiben stumm) |
 | **Darstellung** | Notenschlüssel (einstimmig), Transponieren – ändert nur die Anzeige und den Druck, nicht die Noten |
 | **Export** | siehe unten |
 | **Vorlagen** | C-Dur Tonleiter, Hänschen Klein, Walzer, SATB-Beispiel |
