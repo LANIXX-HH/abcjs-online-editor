@@ -224,21 +224,26 @@ class MainActivity : AppCompatActivity() {
                 val pw = WebView(this@MainActivity)
                 pw.webViewClient = object : WebViewClient() {
                     override fun onPageFinished(view: WebView, url: String?) {
-                        val pm = getSystemService(Context.PRINT_SERVICE) as PrintManager
-                        val adapter = view.createPrintDocumentAdapter(jobName)
-                        pm.print(
-                            jobName,
-                            adapter,
-                            PrintAttributes.Builder()
-                                .setMediaSize(PrintAttributes.MediaSize.ISO_A4)
-                                .build()
-                        )
-                        printWeb = null
+                        // short pause so a chosen text font is loaded before the page is printed
+                        view.postDelayed({ startPrint(view, jobName) }, 500)
                     }
                 }
                 printWeb = pw
                 pw.loadDataWithBaseURL("file:///android_asset/", html, "text/html", "UTF-8", null)
             }
+        }
+
+        private fun startPrint(view: WebView, jobName: String) {
+            val pm = getSystemService(Context.PRINT_SERVICE) as PrintManager
+            val adapter = view.createPrintDocumentAdapter(jobName)
+            pm.print(
+                jobName,
+                adapter,
+                PrintAttributes.Builder()
+                    .setMediaSize(PrintAttributes.MediaSize.ISO_A4)
+                    .build()
+            )
+            printWeb = null
         }
     }
 

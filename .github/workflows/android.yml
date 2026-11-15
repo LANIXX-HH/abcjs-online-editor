@@ -55,6 +55,9 @@ jobs:
             "$ASSETS/index.html"
           echo "Assets prepared:"; ls -la "$ASSETS"
 
+      - name: Bundle text fonts (Google Fonts → offline)
+        run: python3 android/bundle_fonts.py android/app/src/main/assets
+
       - name: Bundle user guide (README.md → offline help page)
         run: |
           pip install --quiet markdown
