@@ -101,9 +101,7 @@ button{font-family:inherit}
 #barStatus{margin:0 0 6px 2px;font-size:12.5px;color:var(--text2);line-height:1.5}
 #barStatus b{color:var(--text)} #barStatus .bs-act{text-decoration:underline;text-underline-offset:3px}
 #barStatus .bs-short{color:#E0281E;font-weight:700}
-#paper{position:relative!important}
-.bar-mark{position:absolute;pointer-events:none;font:700 10px/1 system-ui,sans-serif;color:#E0281E;background:var(--paper);border:1px solid #E0281E;border-radius:4px;padding:1px 3px;white-space:nowrap;z-index:2}
-.app.lyrmode #barStatus,.app.lyrmode .bar-mark{display:none}
+.app.lyrmode #barStatus{display:none}
 .micmon{position:sticky;bottom:6px;margin:8px auto 0;width:max-content;display:flex;align-items:center;gap:10px;background:var(--ink);color:#fff;border-radius:999px;padding:7px 14px;font-size:13px;box-shadow:0 4px 14px rgba(0,0,0,.25)}
 .micmon[hidden]{display:none}
 .mm-note{font-weight:700;font-size:16px;min-width:34px;text-align:center}
@@ -983,7 +981,7 @@ function render(fromButtons){
       });
       visualObj=arr&&arr[0]; renderedText=$('abcTa').value;
       $('paper').classList.toggle('multi', state.voiceMode==='multi');
-      computeBars(); drawBarMarks();
+      computeBars();
       paintSelection();
       setupPlayer();
     }catch(e){ console.warn(e); }
@@ -1084,7 +1082,7 @@ function paintSelection(){
    Uses the durations abcjs computed while drawing (triplets, dots, chords, rests correct; grace notes
    don't count). Bars are counted per voice from the start; empty bars (e.g. "|" at line end + "|:" at
    the next line start) are skipped. Shown only here in the editor, never in print/export. */
-let barData=[];   // [voice k] → [{dur (quarters), start, end (chars), first (abcjs elem), bar (abcjs elem|null), staff, inStaff}]
+let barData=[];   // [voice k] → [{dur (quarters), start, end (chars), …}]
 function computeBars(){
   barData=[];
   if(!visualObj||!visualObj.lines) return;
@@ -1154,31 +1152,6 @@ function updateBarStatus(){
     parts.push('<span class="'+(k===c.k?'bs-act ':'')+(short?'bs-short':'')+'">'+escHtml(name)+' '+fmtQ(d)+(short?' (−'+fmtQ(mx-d)+')':'')+'</span>');
   }
   box.innerHTML=head+' · '+parts.join(' · ')+' <span style="opacity:.7">'+t('bar.quarters')+'</span>';
-}
-// small red label over every bar of a voice that is shorter than the longest voice in that bar
-function drawBarMarks(){
-  const paper=$('paper');
-  paper.querySelectorAll('.bar-mark').forEach(e=>e.remove());
-  if(state.voiceMode==='single' || barData.length<2) return;
-  const pr=paper.getBoundingClientRect(), ox=pr.left+paper.clientLeft, oy=pr.top+paper.clientTop;
-  const rectOf=el=>{ const set=el&&el.abselem&&el.abselem.elemset; const node=set&&set.find(x=>x&&x.getBoundingClientRect); return node?node.getBoundingClientRect():null; };
-  const nBars=Math.max(...barData.map(l=>l.length));
-  for(let m=0;m<nBars;m++){
-    const mx=barMax(m);
-    barData.forEach(list=>{
-      const b=list[m]; if(!b || mx-b.dur<=1e-6) return;
-      const fr=rectOf(b.first); if(!fr) return;
-      // height from the five staff lines of this voice's staff (a bar line may span several staves)
-      const stEl=paper.querySelectorAll('.abcjs-staff.abcjs-l'+b.line)[b.staff];
-      const sr=stEl? stEl.getBoundingClientRect() : fr;
-      const lab=document.createElement('div'); lab.className='bar-mark';
-      lab.textContent=fmtQ(b.dur)+'/'+fmtQ(mx);
-      paper.appendChild(lab);
-      const above=b.inStaff===0;          // upper voice of a staff: label above it, lower voice: below
-      lab.style.left=Math.max(0,fr.left-ox-2)+'px';
-      lab.style.top=(above? sr.top-oy-lab.offsetHeight-3 : sr.bottom-oy+3)+'px';
-    });
-  }
 }
 
 /* ================= lyrics layer =================

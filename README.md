@@ -70,8 +70,7 @@ Im Menü unter **Stimmen**:
 
 **Takt-Prüfung** (nur im Editor, nie im Druck/Export):
 - Über dem Notenbild steht für den Takt an der Einfügemarke die Länge jeder Stimme in Vierteln, z. B. *Takt 7 · Sopran 6 · Alt 6 · Tenor 5½ (−½) · Bass 6*. Die längste Stimme ist der Maßstab; kürzere Stimmen sind rot.
-- Im Notenbild steht an jedem Takt einer zu kurzen Stimme ein rotes Kästchen, z. B. `5½/6` (über dem System für die obere, darunter für die untere Stimme eines Systems).
-- Gezählt wird, was abcjs zeichnet: Triolen, Punktierungen, Akkorde und Pausen richtig, Vorschlagsnoten zählen nicht. Takte werden pro Stimme von vorn durchgezählt – fehlt einer Stimme ein Taktstrich, sind alle folgenden Takte markiert.
+- Gezählt wird, was abcjs zeichnet: Triolen, Punktierungen, Akkorde und Pausen richtig, Vorschlagsnoten zählen nicht. Takte werden pro Stimme von vorn durchgezählt – fehlt einer Stimme ein Taktstrich, weichen ab dort alle folgenden Takte ab.
 - Einstimmig: *Takt 7 · 6 Viertel*.
 
 ## Liedtext
