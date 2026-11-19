@@ -68,6 +68,12 @@ Im Menü unter **Stimmen**:
 
 Über dem Notenbild erscheinen dann Stimmen-Tabs; der gewählte Tab bestimmt, in welche Stimme eingegeben wird. Die Klaviatur zeigt pro Stimme den passenden Tonumfang.
 
+**Takt-Prüfung** (nur im Editor, nie im Druck/Export):
+- Über dem Notenbild steht für den Takt an der Einfügemarke die Länge jeder Stimme in Vierteln, z. B. *Takt 7 · Sopran 6 · Alt 6 · Tenor 5½ (−½) · Bass 6*. Die längste Stimme ist der Maßstab; kürzere Stimmen sind rot.
+- Im Notenbild steht an jedem Takt einer zu kurzen Stimme ein rotes Kästchen, z. B. `5½/6` (über dem System für die obere, darunter für die untere Stimme eines Systems).
+- Gezählt wird, was abcjs zeichnet: Triolen, Punktierungen, Akkorde und Pausen richtig, Vorschlagsnoten zählen nicht. Takte werden pro Stimme von vorn durchgezählt – fehlt einer Stimme ein Taktstrich, sind alle folgenden Takte markiert.
+- Einstimmig: *Takt 7 · 6 Viertel*.
+
 ## Liedtext
 
 Knopf **Text** oben öffnet die Liedtext-Ebene (Noten sind dabei gesperrt):

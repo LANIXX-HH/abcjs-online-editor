@@ -97,6 +97,13 @@ button{font-family:inherit}
 .lyr-free{margin:6px 0 10px;padding:8px;border:1.5px dashed var(--border);border-radius:8px}
 .lyr-free>b{display:block;font-size:12px;margin-bottom:4px}
 #hint{display:block;margin:0 0 6px 2px;font-size:11px;color:var(--text2)}
+/* bar check (editor only – print/export draw their own score without it) */
+#barStatus{margin:0 0 6px 2px;font-size:12.5px;color:var(--text2);line-height:1.5}
+#barStatus b{color:var(--text)} #barStatus .bs-act{text-decoration:underline;text-underline-offset:3px}
+#barStatus .bs-short{color:#E0281E;font-weight:700}
+#paper{position:relative!important}
+.bar-mark{position:absolute;pointer-events:none;font:700 10px/1 system-ui,sans-serif;color:#E0281E;background:var(--paper);border:1px solid #E0281E;border-radius:4px;padding:1px 3px;white-space:nowrap;z-index:2}
+.app.lyrmode #barStatus,.app.lyrmode .bar-mark{display:none}
 .micmon{position:sticky;bottom:6px;margin:8px auto 0;width:max-content;display:flex;align-items:center;gap:10px;background:var(--ink);color:#fff;border-radius:999px;padding:7px 14px;font-size:13px;box-shadow:0 4px 14px rgba(0,0,0,.25)}
 .micmon[hidden]{display:none}
 .mm-note{font-weight:700;font-size:16px;min-width:34px;text-align:center}
@@ -348,6 +355,7 @@ body.custom-font :is(#fTitle,#fComposer,#abcTa,#abcMirror,#paper input){font-fam
         <div class="ta-wrap"><div id="abcMirror" aria-hidden="true"></div><textarea id="abcTa" spellcheck="false"></textarea></div>
       </div>
       <span id="hint" data-i18n="hint">Tippe rechts eine Note · Grundton unten (rot)</span>
+      <div id="barStatus" hidden></div>
       <div id="paper"></div>
       <div id="player" style="position:absolute;width:0;height:0;overflow:hidden;opacity:0;pointer-events:none"></div>
       <div class="micmon" id="micMon" hidden>
@@ -423,7 +431,7 @@ const $=id=>document.getElementById(id);
 
 /* ================= i18n ================= */
 const I18N={
-  de:{'m.font':'Schrift','m.font.std':'Standard','m.sound':'Klang','m.instr':'Instrument','m.instr.piano':'Klavier','m.instr.choir':'Chor („Aah“)','m.instr.organ':'Kirchenorgel','b.open':'📂 Datei öffnen','open.pick':'Welches Stück?','open.err':'Datei konnte nicht gelesen werden','m.help':'📖 Anleitung','m.helpTitle':'Anleitung','m.github':'Projekt auf GitHub','m.glory':'Zur Ehre Gottes geschaffen','m.edit':'Bearbeiten','m.drag':'Noten ziehen (Tonhöhe per Finger/Maus ändern)','kc.title':'Tonart wählen','kc.ok':'Übernehmen','kc.cancel':'Abbrechen','kc.acc0':'keine Vorzeichen','tb.lyrics':'Text','ly.add':'＋ Text','ly.free':'Freitext unter dem Stück','ly.addFree':'＋ Freitext','ly.notes':'Noten','ly.syl':'Silben','ly.under':'Text unter','ly.verse':'Zeile','ly.hint':'Silben mit - trennen, _ hält eine Silbe, * überspringt eine Note, | springt zum nächsten Takt','tb.menu':'☰ Menü','m.settings':'Einstellungen','m.song':'Lied-Info','m.title':'Titel','m.composer':'Komponist','m.meter':'Taktart','m.tempo':'Tempo (BPM)','m.unit':'Einheitslänge (L:)',
+  de:{'bar.label':'Takt','bar.quarters':'Viertel','m.font':'Schrift','m.font.std':'Standard','m.sound':'Klang','m.instr':'Instrument','m.instr.piano':'Klavier','m.instr.choir':'Chor („Aah“)','m.instr.organ':'Kirchenorgel','b.open':'📂 Datei öffnen','open.pick':'Welches Stück?','open.err':'Datei konnte nicht gelesen werden','m.help':'📖 Anleitung','m.helpTitle':'Anleitung','m.github':'Projekt auf GitHub','m.glory':'Zur Ehre Gottes geschaffen','m.edit':'Bearbeiten','m.drag':'Noten ziehen (Tonhöhe per Finger/Maus ändern)','kc.title':'Tonart wählen','kc.ok':'Übernehmen','kc.cancel':'Abbrechen','kc.acc0':'keine Vorzeichen','tb.lyrics':'Text','ly.add':'＋ Text','ly.free':'Freitext unter dem Stück','ly.addFree':'＋ Freitext','ly.notes':'Noten','ly.syl':'Silben','ly.under':'Text unter','ly.verse':'Zeile','ly.hint':'Silben mit - trennen, _ hält eine Silbe, * überspringt eine Note, | springt zum nächsten Takt','tb.menu':'☰ Menü','m.settings':'Einstellungen','m.song':'Lied-Info','m.title':'Titel','m.composer':'Komponist','m.meter':'Taktart','m.tempo':'Tempo (BPM)','m.unit':'Einheitslänge (L:)',
     'opt.none':'— Keine —','meter.44':'4/4 – Vier Viertel','meter.34':'3/4 – Walzer','meter.24':'2/4 – Marsch','meter.68':'6/8 – Jig','meter.C':'C – Common time',
     'unit.8':'1/8 – Achtel','unit.4':'1/4 – Viertel','unit.2':'1/2 – Halbe','unit.1':'1 – Ganze',
     'm.voices':'Stimmen','m.mode':'Modus','m.single':'Einstimmig','m.multi':'Mehrstimmig (SATB)','m.vcount':'Anzahl Stimmen',
@@ -438,7 +446,7 @@ const I18N={
     'sym.newline':'⏎ Neue Zeile','sym.repstart':'|: Wdh. auf','sym.repend':':| Wdh. zu',
     'len.whole':'𝅝 Ganze','len.half':'𝅗𝅥 Halbe','len.quarter':'♩ Viertel','len.eighth':'♪ Achtel','len.sixteenth':'𝅘𝅥𝅯 Sechzehntel',
     'v.voice':'Stimme','saved.empty':'Noch nichts gespeichert.'},
-  en:{'m.font':'Font','m.font.std':'Default','m.sound':'Sound','m.instr':'Instrument','m.instr.piano':'Piano','m.instr.choir':'Choir (“Aah”)','m.instr.organ':'Church organ','b.open':'📂 Open file','open.pick':'Which tune?','open.err':'Could not read the file','m.help':'📖 User guide','m.helpTitle':'User guide','m.github':'Project on GitHub','m.glory':'Created to the Glory of God','m.edit':'Editing','m.drag':'Drag notes (change pitch with finger/mouse)','kc.title':'Choose key','kc.ok':'Apply','kc.cancel':'Cancel','kc.acc0':'no accidentals','tb.lyrics':'Lyrics','ly.add':'＋ Lyrics','ly.free':'Free text below the tune','ly.addFree':'＋ Free text','ly.notes':'notes','ly.syl':'syllables','ly.under':'Text under','ly.verse':'Line','ly.hint':'Split syllables with -, _ holds a syllable, * skips a note, | jumps to the next bar','tb.menu':'☰ Menu','m.settings':'Settings','m.song':'Song info','m.title':'Title','m.composer':'Composer','m.meter':'Meter','m.tempo':'Tempo (BPM)','m.unit':'Unit length (L:)',
+  en:{'bar.label':'Bar','bar.quarters':'quarters','m.font':'Font','m.font.std':'Default','m.sound':'Sound','m.instr':'Instrument','m.instr.piano':'Piano','m.instr.choir':'Choir (“Aah”)','m.instr.organ':'Church organ','b.open':'📂 Open file','open.pick':'Which tune?','open.err':'Could not read the file','m.help':'📖 User guide','m.helpTitle':'User guide','m.github':'Project on GitHub','m.glory':'Created to the Glory of God','m.edit':'Editing','m.drag':'Drag notes (change pitch with finger/mouse)','kc.title':'Choose key','kc.ok':'Apply','kc.cancel':'Cancel','kc.acc0':'no accidentals','tb.lyrics':'Lyrics','ly.add':'＋ Lyrics','ly.free':'Free text below the tune','ly.addFree':'＋ Free text','ly.notes':'notes','ly.syl':'syllables','ly.under':'Text under','ly.verse':'Line','ly.hint':'Split syllables with -, _ holds a syllable, * skips a note, | jumps to the next bar','tb.menu':'☰ Menu','m.settings':'Settings','m.song':'Song info','m.title':'Title','m.composer':'Composer','m.meter':'Meter','m.tempo':'Tempo (BPM)','m.unit':'Unit length (L:)',
     'opt.none':'— None —','meter.44':'4/4 – Common','meter.34':'3/4 – Waltz','meter.24':'2/4 – March','meter.68':'6/8 – Jig','meter.C':'C – Common time',
     'unit.8':'1/8 – Eighth','unit.4':'1/4 – Quarter','unit.2':'1/2 – Half','unit.1':'1 – Whole',
     'm.voices':'Voices','m.mode':'Mode','m.single':'Single voice','m.multi':'Multi-voice (SATB)','m.vcount':'Number of voices',
@@ -453,7 +461,7 @@ const I18N={
     'sym.newline':'⏎ New line','sym.repstart':'|: Repeat start','sym.repend':':| Repeat end',
     'len.whole':'𝅝 Whole','len.half':'𝅗𝅥 Half','len.quarter':'♩ Quarter','len.eighth':'♪ Eighth','len.sixteenth':'𝅘𝅥𝅯 Sixteenth',
     'v.voice':'Voice','saved.empty':'Nothing saved yet.'},
-  ru:{'m.font':'Шрифт','m.font.std':'Стандарт','m.sound':'Звук','m.instr':'Инструмент','m.instr.piano':'Фортепиано','m.instr.choir':'Хор («А-а»)','m.instr.organ':'Церковный орган','b.open':'📂 Открыть файл','open.pick':'Какую мелодию?','open.err':'Не удалось прочитать файл','m.help':'📖 Инструкция','m.helpTitle':'Инструкция','m.github':'Проект на GitHub','m.glory':'Создано во Славу Божию','m.edit':'Редактирование','m.drag':'Перетаскивать ноты (менять высоту пальцем/мышью)','kc.title':'Выбор тональности','kc.ok':'Применить','kc.cancel':'Отмена','kc.acc0':'без знаков','tb.lyrics':'Текст','ly.add':'＋ Текст','ly.free':'Свободный текст под песней','ly.addFree':'＋ Свободный текст','ly.notes':'нот','ly.syl':'слогов','ly.under':'Текст под','ly.verse':'Строка','ly.hint':'Слоги через -, _ тянет слог, * пропускает ноту, | переход к следующему такту','tb.menu':'☰ Меню','m.settings':'Настройки','m.song':'О песне','m.title':'Название','m.composer':'Композитор','m.meter':'Размер','m.tempo':'Темп (BPM)','m.unit':'Базовая длит. (L:)',
+  ru:{'bar.label':'Такт','bar.quarters':'четвертей','m.font':'Шрифт','m.font.std':'Стандарт','m.sound':'Звук','m.instr':'Инструмент','m.instr.piano':'Фортепиано','m.instr.choir':'Хор («А-а»)','m.instr.organ':'Церковный орган','b.open':'📂 Открыть файл','open.pick':'Какую мелодию?','open.err':'Не удалось прочитать файл','m.help':'📖 Инструкция','m.helpTitle':'Инструкция','m.github':'Проект на GitHub','m.glory':'Создано во Славу Божию','m.edit':'Редактирование','m.drag':'Перетаскивать ноты (менять высоту пальцем/мышью)','kc.title':'Выбор тональности','kc.ok':'Применить','kc.cancel':'Отмена','kc.acc0':'без знаков','tb.lyrics':'Текст','ly.add':'＋ Текст','ly.free':'Свободный текст под песней','ly.addFree':'＋ Свободный текст','ly.notes':'нот','ly.syl':'слогов','ly.under':'Текст под','ly.verse':'Строка','ly.hint':'Слоги через -, _ тянет слог, * пропускает ноту, | переход к следующему такту','tb.menu':'☰ Меню','m.settings':'Настройки','m.song':'О песне','m.title':'Название','m.composer':'Композитор','m.meter':'Размер','m.tempo':'Темп (BPM)','m.unit':'Базовая длит. (L:)',
     'opt.none':'— Нет —','meter.44':'4/4 – Четыре четверти','meter.34':'3/4 – Вальс','meter.24':'2/4 – Марш','meter.68':'6/8 – Джига','meter.C':'C – Common time',
     'unit.8':'1/8 – Восьмая','unit.4':'1/4 – Четверть','unit.2':'1/2 – Половинная','unit.1':'1 – Целая',
     'm.voices':'Голоса','m.mode':'Режим','m.single':'Один голос','m.multi':'Многоголосие (SATB)','m.vcount':'Число голосов',
@@ -975,6 +983,7 @@ function render(fromButtons){
       });
       visualObj=arr&&arr[0]; renderedText=$('abcTa').value;
       $('paper').classList.toggle('multi', state.voiceMode==='multi');
+      computeBars(); drawBarMarks();
       paintSelection();
       setupPlayer();
     }catch(e){ console.warn(e); }
@@ -1056,6 +1065,7 @@ function onNoteClick(abcElem, tn, classes, analysis, drag, ev){
   if(tk && tk.kind==='note'){ vo.sel=loc.i; vo.cursor=loc.i+1; playFrom={v:loc.v,i:loc.i}; playMidi(tk.midi); paintSelection(); showInCode(loc.start, loc.end); }
 }
 function paintSelection(){
+  updateBarStatus();                     // the insert point may have moved to another bar
   const paper=$('paper');
   paper.querySelectorAll('.sel-note').forEach(e=>e.classList.remove('sel-note'));
   const v=AV();
@@ -1068,6 +1078,107 @@ function paintSelection(){
   }
   const noteEls=paper.querySelectorAll('.abcjs-note');
   if(target>=0 && noteEls[target]) noteEls[target].classList.add('sel-note');
+}
+
+/* ================= bar check: length of each bar per voice, in quarters =================
+   Uses the durations abcjs computed while drawing (triplets, dots, chords, rests correct; grace notes
+   don't count). Bars are counted per voice from the start; empty bars (e.g. "|" at line end + "|:" at
+   the next line start) are skipped. Shown only here in the editor, never in print/export. */
+let barData=[];   // [voice k] → [{dur (quarters), start, end (chars), first (abcjs elem), bar (abcjs elem|null), staff, inStaff}]
+function computeBars(){
+  barData=[];
+  if(!visualObj||!visualObj.lines) return;
+  visualObj.lines.forEach((line,li)=>{
+    if(!line.staff) return;
+    let k=0;
+    line.staff.forEach((st,si)=>(st.voices||[]).forEach((arr,vi)=>{
+      const list=barData[k]||(barData[k]=[]);
+      let cur=list.open||null, trip=1, tripLeft=0;
+      arr.forEach(e=>{
+        if(e.el_type==='note' && e.duration!=null){
+          if(e.startTriplet){ trip=e.tripletMultiplier||1; tripLeft=1; }
+          if(!cur) cur={dur:0,start:e.startChar,end:e.endChar,first:e,bar:null,line:li,staff:si,inStaff:vi};
+          cur.dur+=e.duration*4*(tripLeft?trip:1); cur.end=e.endChar;
+          if(e.endTriplet){ trip=1; tripLeft=0; }
+        } else if(e.el_type==='bar'){
+          if(cur && cur.dur>0){ cur.bar=e; cur.end=e.endChar; list.push(cur); }
+          cur=null;
+        }
+      });
+      list.open=cur;          // bar continues on the next line (no bar line at the line end)
+      k++;
+    }));
+  });
+  barData.forEach(list=>{ if(list.open && list.open.dur>0) list.push(list.open); delete list.open; });
+}
+const FRAC={0.25:'¼',0.5:'½',0.75:'¾',0.125:'⅛',0.375:'⅜',0.625:'⅝',0.875:'⅞'};
+function fmtQ(q){
+  const w=Math.floor(q+1e-6), f=q-w;
+  if(f<1e-6) return String(w);
+  for(const [v,sym] of Object.entries(FRAC)) if(Math.abs(f-v)<1e-6) return (w||'')+sym;
+  if(Math.abs(f-1/3)<1e-3) return (w||'')+'⅓'; if(Math.abs(f-2/3)<1e-3) return (w||'')+'⅔';
+  return (Math.round(q*100)/100).toString().replace('.',',');
+}
+const barMax=m=>Math.max(...barData.map(l=>l[m]?l[m].dur:0));
+// which bar is the insert point in? (voice k, bar index m)
+function currentBar(){
+  if(!barData.length) return null;
+  const ta=$('abcTa');
+  if(renderedText!==fullAbc()){                    // ABC typed, not taken over: follow the caret in the code
+    if(document.activeElement!==ta) return null;
+    const pos=ta.selectionStart;
+    for(let k=0;k<barData.length;k++){ const l=barData[k]; for(let m=0;m<l.length;m++) if(pos>=l[m].start && pos<=l[m].end) return {k,m}; }
+    return null;
+  }
+  const k=state.voiceMode==='single'?0:state.activeVoice, v=AV(), list=barData[k]||[];
+  let pos=-1;
+  if(v.cursor>0){ const r=lastMap.find(r=>r.v===k && r.i===v.cursor-1); if(r) pos=r.end; }
+  let m=list.findIndex(b=>b.end>pos);
+  if(m<0) m=list.length;                             // after the last bar line: a new bar starts
+  return {k,m};
+}
+function updateBarStatus(){
+  const box=$('barStatus');
+  const any=barData.some(l=>l.length);
+  $('hint').style.display=any?'none':''; box.hidden=!any;
+  if(!any) return;
+  const c=currentBar(); if(!c){ return; }
+  const n=barData.length, head='<b>'+t('bar.label')+' '+(c.m+1)+'</b>';
+  if(state.voiceMode==='single' || n<2){
+    const b=(barData[0]||[])[c.m]; box.innerHTML=head+' · '+fmtQ(b?b.dur:0)+' '+t('bar.quarters'); return;
+  }
+  const mx=barMax(c.m), parts=[];
+  for(let k=0;k<n;k++){
+    const b=barData[k][c.m], d=b?b.dur:0, short=mx-d>1e-6;
+    const name=(state.voices[k]&&state.voices[k].name)||(t('v.voice')+' '+(k+1));
+    parts.push('<span class="'+(k===c.k?'bs-act ':'')+(short?'bs-short':'')+'">'+escHtml(name)+' '+fmtQ(d)+(short?' (−'+fmtQ(mx-d)+')':'')+'</span>');
+  }
+  box.innerHTML=head+' · '+parts.join(' · ')+' <span style="opacity:.7">'+t('bar.quarters')+'</span>';
+}
+// small red label over every bar of a voice that is shorter than the longest voice in that bar
+function drawBarMarks(){
+  const paper=$('paper');
+  paper.querySelectorAll('.bar-mark').forEach(e=>e.remove());
+  if(state.voiceMode==='single' || barData.length<2) return;
+  const pr=paper.getBoundingClientRect(), ox=pr.left+paper.clientLeft, oy=pr.top+paper.clientTop;
+  const rectOf=el=>{ const set=el&&el.abselem&&el.abselem.elemset; const node=set&&set.find(x=>x&&x.getBoundingClientRect); return node?node.getBoundingClientRect():null; };
+  const nBars=Math.max(...barData.map(l=>l.length));
+  for(let m=0;m<nBars;m++){
+    const mx=barMax(m);
+    barData.forEach(list=>{
+      const b=list[m]; if(!b || mx-b.dur<=1e-6) return;
+      const fr=rectOf(b.first); if(!fr) return;
+      // height from the five staff lines of this voice's staff (a bar line may span several staves)
+      const stEl=paper.querySelectorAll('.abcjs-staff.abcjs-l'+b.line)[b.staff];
+      const sr=stEl? stEl.getBoundingClientRect() : fr;
+      const lab=document.createElement('div'); lab.className='bar-mark';
+      lab.textContent=fmtQ(b.dur)+'/'+fmtQ(mx);
+      paper.appendChild(lab);
+      const above=b.inStaff===0;          // upper voice of a staff: label above it, lower voice: below
+      lab.style.left=Math.max(0,fr.left-ox-2)+'px';
+      lab.style.top=(above? sr.top-oy-lab.offsetHeight-3 : sr.bottom-oy+3)+'px';
+    });
+  }
 }
 
 /* ================= lyrics layer =================
