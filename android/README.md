@@ -12,6 +12,7 @@ Die installierte Version steht im Menü neben „Einstellungen“.
 
 ## Was die App zusätzlich kann
 
+- **ABC-Datei speichern:** im ABC-Code (`</>`) → 💾 Speichern. Android fragt nach Ort (Gerät, Downloads, Google Drive …) und Dateiname.
 - **ABC-Datei öffnen:** im ABC-Code (`</>`) → 📂 Datei öffnen. Der Android-Dateiauswahldialog zeigt das Gerät und – wenn die Drive-App installiert ist – Google Drive.
 - **„Öffnen mit“ / „Teilen“:** `.abc`-Dateien im Dateimanager antippen → *ABC-Editor* wählen (mit „Immer“ wird er Standard). Auch aus Google Drive, WhatsApp oder Mail über *Teilen*. Mehrere Stücke in einer Datei → Auswahl.
 - **Noten drucken** über den Android-Druckdienst (auch „Als PDF speichern“).

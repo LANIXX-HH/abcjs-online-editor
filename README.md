@@ -93,6 +93,7 @@ Erneut **Text** antippen kehrt zur Noteneingabe zurück.
 - **Note und Code verbunden:** Note im Notenbild antippen → sie wird im Code rot markiert. Cursor im Code auf, vor oder direkt hinter eine Note setzen (auch mit den Pfeiltasten) → die Note ist im Notenbild ausgewählt und die Klaviatur schreibt dort weiter.
 - Eigener ABC-Code (z. B. aus anderen Programmen) kann hier eingefügt werden. Alles, was der Editor nicht selbst bearbeitet – Liedtext, Bögen, Akkorde, Verzierungen, Kommentare, Halsrichtung usw. –, bleibt unverändert erhalten.
 - **📂 Datei öffnen** (nur App): `.abc`-/Textdatei vom Gerät oder aus Google Drive laden. Enthält die Datei mehrere Stücke (`X:`), wählt man eines aus.
+- **💾 Speichern** (nur App): ABC-Code als `.abc`-Datei speichern – Ordner, Google Drive und Dateiname wählt man im Android-Dialog (vorgeschlagen: Titel des Lieds).
 - Leerzeilen innerhalb eines Stücks werden zu `%` (in ABC beendet eine Leerzeile sonst das Stück).
 
 ## Einstellungen (Menü)

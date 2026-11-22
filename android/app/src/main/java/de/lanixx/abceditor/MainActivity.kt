@@ -56,6 +56,23 @@ class MainActivity : AppCompatActivity() {
         cb?.onReceiveValue(if (uri != null) arrayOf(uri) else null)   // null = cancelled, the page must be told
     }
 
+    // "Save" in the editor: Android's "save as" picker (device storage, Downloads, Google Drive, other clouds)
+    private var pendingSaveText: String? = null
+    private val createDocLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.CreateDocument("text/plain")
+    ) { uri ->
+        val text = pendingSaveText
+        pendingSaveText = null
+        if (uri == null || text == null) return@registerForActivityResult   // cancelled
+        try {
+            contentResolver.openOutputStream(uri, "wt")?.use { it.write(text.toByteArray(Charsets.UTF_8)) }
+                ?: throw IllegalStateException("kein Zugriff")
+            Toast.makeText(this, "Gespeichert", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Toast.makeText(this, "Speichern fehlgeschlagen: ${e.message}", Toast.LENGTH_LONG).show()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -213,6 +230,19 @@ class MainActivity : AppCompatActivity() {
         @JavascriptInterface
         fun save(dataUrl: String, mimetype: String) {
             runOnUiThread { saveDataUrl(dataUrl, mimetype) }
+        }
+
+        // ABC code → "save as" picker; the user chooses folder, cloud and file name
+        @JavascriptInterface
+        fun saveAbc(fileName: String, text: String) {
+            runOnUiThread {
+                pendingSaveText = text
+                try { createDocLauncher.launch(fileName) }
+                catch (e: Exception) {
+                    pendingSaveText = null
+                    Toast.makeText(this@MainActivity, "Speichern nicht möglich: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
         }
 
         // Native printing: render the print HTML in an off-screen WebView,
